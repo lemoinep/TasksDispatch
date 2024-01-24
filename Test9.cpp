@@ -70,6 +70,9 @@ class TasksDispach
                 template<class Function>
                     Function sub_run_specx_R(Function myFunc);
 
+        template<class Function,class ArgR,class ArgW>
+            Function sub_run_specx_RW(Function myFunc,ArgR myArgR,ArgW myArgW);
+
         template<class InputIterator, class Function>
             Function for_each(InputIterator first, InputIterator last,Function myFunc);
 
@@ -149,6 +152,7 @@ Function TasksDispach::for_each(InputIterator first, InputIterator last,Function
                 if (QInfo) { std::cout<<"Call num Thread futures="<<idk<<"\n"; }
                 futures.emplace_back(std::async(std::launch::async,myFunc,idk));
             }
+            for( auto& r : futures){ auto a =  r.get(); }
         }
 
         if (numTypeTh==2) {
@@ -251,6 +255,32 @@ Function TasksDispach::sub_run_specx_R(Function myFunc)
     return myFunc;
 }
 
+template<class Function,class ArgR,class ArgW>
+Function TasksDispach::sub_run_specx_RW(Function myFunc,ArgR myArgR,ArgW myArgW)
+{
+   bool QInfo=true; 
+        SpRuntime runtime(nbTh);  
+        nbTh= runtime.getNbThreads();
+        int iValue=0;
+        for(int k= 0; k < nbTh; ++k)
+        { 
+            auto const& idk = k;
+            if (QInfo) { std::cout<<"Call num Thread Read Specx="<<idk<<"\n"; }
+            runtime.task(SpRead(myArgR),SpWrite(myArgW),myFunc).setTaskName("Op("+std::to_string(idk)+")");
+            usleep(1);
+            std::atomic_int counter(0);
+        }
+        runtime.waitAllTasks();
+        runtime.stopAllThreads();
+        if (QSave)
+        {
+            runtime.generateDot(FileName+".dot", true);
+            runtime.generateTrace(FileName+".svg");   
+        }
+        if (QInfo) { std::cout<<"\n"; }
+    return myFunc;
+}
+
 
 template<class Function>
 Function TasksDispach::run(Function myFunc)
@@ -261,7 +291,76 @@ Function TasksDispach::run(Function myFunc)
 }
 
 
+/*=====================================================================================================*/
 
+template<class Function, class... Args>
+void async_wrapper(Function&& f, Args&&... args, std::future<void>& future,
+                   std::future<void>&& is_valid, std::promise<void>&& is_moved) {
+    is_valid.wait(); // Wait until the return value of std::async is written to "future"
+    auto our_future = std::move(future); // Move "future" to a local variable
+    is_moved.set_value(); // Only now we can leave void_async in the main thread
+
+    // This is also used by std::async so that member function pointers work transparently
+    auto functor = std::bind(f, std::forward<Args>(args)...);
+    functor();
+}
+
+template<class Function, class... Args> // This is what you call instead of std::async
+void void_async(Function&& f, Args&&... args) {
+    std::future<void> future; // This is for std::async return value
+    // This is for our synchronization of moving "future" between threads
+    std::promise<void> valid;
+    std::promise<void> is_moved;
+    auto valid_future = valid.get_future();
+    auto moved_future = is_moved.get_future();
+
+    // Here we pass "future" as a reference, so that async_wrapper
+    // can later work with std::async's return value
+    future = std::async(
+        async_wrapper<Function, Args...>,
+        std::forward<Function>(f), std::forward<Args>(args)...,
+        std::ref(future), std::move(valid_future), std::move(is_moved)
+    );
+    valid.set_value(); // Unblock async_wrapper waiting for "future" to become valid
+    moved_future.wait(); // Wait for "future" to actually be moved
+}
+
+
+int long_running_task(int target, const std::atomic_bool& cancelled)
+{
+    // simulate a long running task for target*100ms, 
+    // the task should check for cancelled often enough!
+    while(target-- && !cancelled)
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // return results to the future or raise an error 
+    // in case of cancellation
+    return cancelled ? 1 : 0;
+}
+
+
+
+/*=====================================================================================================*/
+
+template <typename result_type, typename function_type>
+std::future<result_type> startdetachedfuture(function_type func) {
+    std::promise<result_type> pro;
+    std::future<result_type> fut = pro.get_future();
+
+    std::thread([func](std::promise<result_type> p){p.set_value(func());},
+                std::move(pro)).detach();
+
+    return fut;
+}
+
+
+template<typename F>
+auto async_deferred(F&& func) -> std::future<decltype(func())>
+{
+    auto task   = std::packaged_task<decltype(func())()>(std::forward<F>(func));
+    auto future = task.get_future();
+    std::thread(std::move(task)).detach();
+    return std::move(future);
+}
 
 /*=====================================================================================================*/
 
@@ -387,6 +486,7 @@ void activeBlock001()
     Fg5.init(3,12,true); Fg5.setFileName("TestDispachSpecxW"); 
     Fg5.QSlipt=true;
     Fg5.sub_run_specx_W(MyAlgo005);
+    //Fg5.run(MyAlgo005);
     stop_time= std::chrono::steady_clock::now();
     run_time=std::chrono::duration_cast<std::chrono::microseconds> (stop_time-start_time);
     std::cout<<"DeltaTime="<<run_time.count()<< std::endl;
@@ -427,6 +527,18 @@ void activeBlock002()
     std::cout <<"END:ForEach\n\n";
 }
 
+void activeBlock003()
+{
+    auto MyAlgo000 = []{fprintf(stderr, "i live!\n"); sleep(10); return 123;};
+    std::future<int> myfuture = startdetachedfuture<int, decltype(MyAlgo000)>(MyAlgo000);
+    sleep(1);
+}
+
+void activeBlock004()
+{
+    
+}
+
 
 int main(int argc, const char** argv) {
 
@@ -445,6 +557,17 @@ int main(int argc, const char** argv) {
   std::cout << "<<< Block002 >>>" << std::endl;
   activeBlock002();
   std::cout << std::endl;
+
+  std::cout << std::endl;
+  std::cout << "<<< Block003: Detached Future >>>" << std::endl;
+  activeBlock003();
+  std::cout << std::endl;
+
+  std::cout << std::endl;
+  std::cout << "<<< Block004: Detached Future 2 >>>" << std::endl;
+  activeBlock004();
+  std::cout << std::endl;
+
 
 
   std::cout << "<<< The End >>>" << std::endl << std::endl;
