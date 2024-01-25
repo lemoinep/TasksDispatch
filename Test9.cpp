@@ -365,6 +365,7 @@ auto async_deferred(F&& func) -> std::future<decltype(func())>
 /*=====================================================================================================*/
 
 
+
 template<class Function>
 Function TestSpecxWithTwoParam(Function myFunc)
 {
