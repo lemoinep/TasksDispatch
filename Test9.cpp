@@ -447,14 +447,8 @@ void activeBlockTest001()
     std::vector<double> valuesVec;
     valuesVec.clear();
 
-    auto MyAlgo0001=[&](const int& k) {  
-        std::cout<<"wValue k="<<k<< std::endl;
-        usleep(1000);
-    return true;};
-
-
     auto MyAlgo000=[h,sizeBlock,&valuesVec](const int& k) {  
-            std::cout<<"wValue k="<<k<< std::endl;
+            //std::cout<<"wValue k="<<k<< std::endl;
             int vkBegin=k*sizeBlock;
             int vkEnd=(k+1)*sizeBlock;
             double sum=0.0; double x;
@@ -467,6 +461,9 @@ void activeBlockTest001()
         return true;
     };
 
+
+    valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
+
     TasksDispach FgCalculIntegral; 
     FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
     FgCalculIntegral.run(MyAlgo000);
@@ -476,7 +473,7 @@ void activeBlockTest001()
     std::cout<<"PI Value= "<<integralValue<<"\n";
 
 
-    valuesVec.clear();
+    valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
     FgCalculIntegral.init(1,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
     FgCalculIntegral.run(MyAlgo000);
     for (auto it = valuesVec.begin(); it != valuesVec.end(); it++) { std::cout << *it << " "; }
