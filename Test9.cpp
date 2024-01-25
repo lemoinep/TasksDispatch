@@ -499,7 +499,7 @@ void activeBlock001()
 
 
     auto MyAlgo000=[&](const int& k) {  
-        std::cout<<"wValue k="<<k<< std::endl;
+        //std::cout<<"wValue k="<<k<< std::endl;
         wValueOut++; 
         usleep(1000);
     return true;};
@@ -603,16 +603,40 @@ void activeBlock002()
     std::cout <<"END:ForEach\n\n";
 }
 
+
 void activeBlock003()
 {
-    auto MyAlgo000 = []{fprintf(stderr, "i live!\n"); sleep(10); return 123;};
-    std::future<int> myfuture = startdetachedfuture<int, decltype(MyAlgo000)>(MyAlgo000);
-    sleep(1);
+    std::cout <<"Test detach 1"<<std::endl;
+    auto MyAlgoDetach = []{ std::cout <<"I live!"<<std::endl; sleep(2); std::cout <<"YES!"<<std::endl;  return 123;};
+    std::future<int> myfuture = startdetachedfuture<int, decltype(MyAlgoDetach)>(MyAlgoDetach);
+    std::cout <<"Hello"<<std::endl;  sleep(10);  std::cout <<"Hello2"<<std::endl;
 }
+
 
 void activeBlock004()
 {
-    
+    std::cout <<"Test detach 2"<<std::endl;
+    // future from a packaged_task
+    std::packaged_task<int()> task([]{ return 7; }); // wrap the function
+    std::future<int> f1 = task.get_future(); // get a future
+    std::thread t(std::move(task)); // launch on a thread
+ 
+    // future from an async()
+    std::future<int> f2 = std::async(std::launch::async, []{ return 8; });
+ 
+    // future from a promise
+    std::promise<int> p;
+    std::future<int> f3 = p.get_future();
+    std::thread([&p]{ p.set_value_at_thread_exit(9); }).detach();
+ 
+    std::cout << "Waiting..." << std::flush;
+    f1.wait();
+    f2.wait();
+    f3.wait();
+    std::cout << "Done!\nResults are: "
+              << f1.get() << ' ' << f2.get() << ' ' << f3.get() << '\n';
+    t.join();
+
 }
 
 
@@ -645,7 +669,10 @@ int main(int argc, const char** argv) {
   std::cout << std::endl;
 
 
+  std::cout << std::endl;
+  std::cout << "<<< Test calcul intergral  >>>" << std::endl;
   activeBlockTest001();
+  std::cout << std::endl;
 
   std::cout << "<<< The End >>>" << std::endl << std::endl;
   return 0;
