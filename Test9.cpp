@@ -52,6 +52,7 @@ class TasksDispach
         int nbTh;
         bool QSave;
         bool QSlipt;
+        bool QDeferred;
         std::string FileName;
 
         auto begin(); 
@@ -88,6 +89,7 @@ TasksDispach::TasksDispach() {
     QSave=false;
     FileName="TestDispach";
     QSlipt=false;
+    QDeferred=false;
     initIndice();
 }
 
@@ -150,7 +152,8 @@ Function TasksDispach::for_each(InputIterator first, InputIterator last,Function
             { 
                 auto const& idk = *first;
                 if (QInfo) { std::cout<<"Call num Thread futures="<<idk<<"\n"; }
-                futures.emplace_back(std::async(std::launch::async,myFunc,idk));
+                if (QDeferred) { futures.emplace_back(std::async(std::launch::deferred,myFunc,idk)); }
+                else { futures.emplace_back(std::async(std::launch::async,myFunc,idk)); }
             }
             for( auto& r : futures){ auto a =  r.get(); }
         }
@@ -187,7 +190,8 @@ Function TasksDispach::sub_run_async(Function myFunc)
         for(int k= 0; k < nbTh; ++k){ 
             auto const& idk = k;
             if (QInfo) { std::cout<<"Call num Thread futures="<<k<<"\n"; }
-            futures.emplace_back(std::async(std::launch::async,myFunc,idk));
+            if (QDeferred) { futures.emplace_back(std::async(std::launch::deferred,myFunc,idk)); }
+            else { futures.emplace_back(std::async(std::launch::async,myFunc,idk)); }
         }
         for( auto& r : futures){ auto a =  r.get(); }
         if (QInfo) { std::cout<<"\n"; }
@@ -345,7 +349,6 @@ template <typename result_type, typename function_type>
 std::future<result_type> startdetachedfuture(function_type func) {
     std::promise<result_type> pro;
     std::future<result_type> fut = pro.get_future();
-
     std::thread([func](std::promise<result_type> p){p.set_value(func());},
                 std::move(pro)).detach();
 
@@ -354,12 +357,32 @@ std::future<result_type> startdetachedfuture(function_type func) {
 
 
 template<typename F>
-auto async_deferred(F&& func) -> std::future<decltype(func())>
+auto async_deferred_alpha(F&& func) -> std::future<decltype(func())>
 {
     auto task   = std::packaged_task<decltype(func())()>(std::forward<F>(func));
     auto future = task.get_future();
     std::thread(std::move(task)).detach();
     return std::move(future);
+}
+
+template<typename F>
+auto async_deferred_beta(F&& func) -> std::future<decltype(func())>
+{
+    using result_type = decltype(func());
+    auto promise = std::promise<result_type>();
+    auto future  = promise.get_future();
+    std::thread(std::bind([=](std::promise<result_type>& promise)
+    {
+        try
+        {
+            promise.set_value(func()); 
+        }
+        catch(...)
+        {
+            promise.set_exception(std::current_exception());
+        }
+    }, std::move(promise))).detach();
+    return future;
 }
 
 /*=====================================================================================================*/
@@ -438,6 +461,7 @@ void activeBlock000()
 
 void activeBlockTest001()
 {
+    //CALCUL DE PI par les deux méthodes std::async et Specx
     int nbThreads = 6;
     long int nbN=1000000;
     int sizeBlock=nbN/nbThreads;
@@ -462,8 +486,8 @@ void activeBlockTest001()
     };
 
 
+    std::cout<<"PI method Specx"<<"\n";
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
-
     TasksDispach FgCalculIntegral; 
     FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
     FgCalculIntegral.run(MyAlgo000);
@@ -472,7 +496,7 @@ void activeBlockTest001()
     integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
     std::cout<<"PI Value= "<<integralValue<<"\n";
 
-
+    std::cout<<"PI method std::async"<<"\n";
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
     FgCalculIntegral.init(1,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
     FgCalculIntegral.run(MyAlgo000);
@@ -480,6 +504,61 @@ void activeBlockTest001()
     std::cout << "\n"; 
     integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
     std::cout<<"PI Value= "<<integralValue<<"\n";
+}
+
+void activeBlockTest002()
+{
+    //ADD 2 vectors
+    int nbThreads = 3;
+    long int nbN=12;
+    int sizeBlock=nbN/nbThreads;
+    int diffBlock=nbN-sizeBlock*nbThreads;
+    std::vector<int> VecA;
+    std::vector<int> VecB;
+    for(int i=0;i<nbN;i++) { 
+        VecA.push_back(i);  
+        VecB.push_back(nbN-i);    
+    }
+    std::vector<int> VecR;
+    auto MyAlgo000=[VecA,VecB,sizeBlock,&VecR](const int& k) {  
+            //std::cout<<"wValue k="<<k<< std::endl;
+            int vkBegin=k*sizeBlock;
+            int vkEnd=(k+1)*sizeBlock;
+            for(int j=vkBegin;j<vkEnd;j++)
+            {
+                VecR.push_back(VecA[j]+VecB[j]);    
+            }
+        return true;
+    };
+
+    std::cout<<"Calcul with std::async"<<"\n";
+    TasksDispach FgCalcul; 
+    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachSum");
+    FgCalcul.run(MyAlgo000);
+    std::cout << "Vec A= "; 
+    for (auto it = VecA.begin(); it != VecA.end(); it++) { std::cout << *it << " "; }
+    std::cout << "\n"; 
+    std::cout << "Vec B= "; 
+    for (auto it = VecB.begin(); it != VecB.end(); it++) { std::cout << *it << " "; }
+    std::cout << "\n"; 
+    std::cout << "Vec R= "; 
+    for (auto it = VecR.begin(); it != VecR.end(); it++) { std::cout << *it << " "; }
+    std::cout << "\n"; 
+
+    std::cout<<"Calcul with Specx"<<"\n";
+    VecR.clear();
+    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachSum");
+    FgCalcul.run(MyAlgo000);
+    std::cout << "Vec A= "; 
+    for (auto it = VecA.begin(); it != VecA.end(); it++) { std::cout << *it << " "; }
+    std::cout << "\n"; 
+    std::cout << "Vec B= "; 
+    for (auto it = VecB.begin(); it != VecB.end(); it++) { std::cout << *it << " "; }
+    std::cout << "\n"; 
+    std::cout << "Vec R= "; 
+    for (auto it = VecR.begin(); it != VecR.end(); it++) { std::cout << *it << " "; }
+    std::cout << "\n"; 
+
 }
 
 
@@ -508,7 +587,7 @@ void activeBlock001()
     std::cout<<"wValueOut="<<wValueOut<< std::endl;
     auto start_time= std::chrono::steady_clock::now();
     TasksDispach Fg1; 
-    Fg1.init(1,12,true); Fg1.setFileName("TestDispachAsync");
+    Fg1.init(1,12,true); Fg1.setFileName("TestDispachAsync"); //Fg1.QDeferred=true;
     Fg1.sub_run_async(MyAlgo000);
     auto stop_time= std::chrono::steady_clock::now();
     auto run_time=std::chrono::duration_cast<std::chrono::microseconds> (stop_time-start_time);
@@ -547,7 +626,6 @@ void activeBlock001()
     run_time=std::chrono::duration_cast<std::chrono::microseconds> (stop_time-start_time);
     std::cout<<"DeltaTime="<<run_time.count()<< std::endl;
     std::cout<<"wValueOut="<<wValueOut<< std::endl<<std::endl;
-
 
   
     auto MyAlgo005=[&](int& v) {  
@@ -618,7 +696,9 @@ void activeBlock004()
     std::cout <<"Test detach 2"<<std::endl;
     // future from a packaged_task
     std::packaged_task<int()> task([]{ return 7; }); // wrap the function
-    std::future<int> f1 = task.get_future(); // get a future
+
+    std::future<int> f1 = task.get_future(); 
+
     std::thread t(std::move(task)); // launch on a thread
  
     // future from an async()
@@ -637,6 +717,16 @@ void activeBlock004()
               << f1.get() << ' ' << f2.get() << ' ' << f3.get() << '\n';
     t.join();
 
+}
+
+void activeBlock005()
+{
+    std::cout <<"Test detach 3"<<std::endl;
+    auto MyAlgoDetach2 = []{ std::cout <<"I live 2!"<<std::endl; sleep(10); std::cout <<"YES 2!"<<std::endl;  return 123;};
+    auto MyAlgoDetach3 = []{ std::cout <<"I live 3!"<<std::endl; sleep(1); std::cout <<"YES 3!"<<std::endl;  return 123;};
+    auto t1=async_deferred_alpha(MyAlgoDetach2); 
+    auto t2=async_deferred_beta(MyAlgoDetach3);
+    t1.get(); t2.get();
 }
 
 
@@ -668,12 +758,21 @@ int main(int argc, const char** argv) {
   activeBlock004();
   std::cout << std::endl;
 
+  std::cout << std::endl;
+  std::cout << "<<< Block005: Deferred >>>" << std::endl;
+  activeBlock005();
+  std::cout << std::endl;
+
+
 
   std::cout << std::endl;
   std::cout << "<<< ====================================== >>>" << std::endl;
   std::cout << "<<< Test calcul intergral  >>>" << std::endl;
   activeBlockTest001();
   std::cout << std::endl;
+
+
+  activeBlockTest002();
 
   std::cout << "<<< The End >>>" << std::endl << std::endl;
   return 0;
