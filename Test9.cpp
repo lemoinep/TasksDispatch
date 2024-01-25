@@ -387,6 +387,30 @@ Function TestSpecxWithTwoParam(Function myFunc)
     return myFunc;
 }
 
+template<class Function,class ArgR,class ArgW>
+Function TestSpecxWith3Param(Function myFunc,ArgR myArgR,ArgW myArgW)
+{
+   bool QInfo=true; 
+    SpRuntime runtime(6);  
+    int nbTh= runtime.getNbThreads();
+        int iValue=0;
+        for(int k= 0; k < nbTh; ++k)
+        { 
+            auto const& idk = k;
+            if (QInfo) { std::cout<<"Call num Thread Read Specx="<<idk<<"\n"; }
+            runtime.task(SpRead(myArgR),SpWrite(myArgW),myFunc).setTaskName("Op("+std::to_string(idk)+")");
+            usleep(1);
+            std::atomic_int counter(0);
+        }
+        runtime.waitAllTasks();
+        runtime.stopAllThreads();
+        runtime.generateDot("TestSpecxWith3Param.dot", true);
+        runtime.generateTrace("TestSpecxWith3Param.svg");   
+        std::cout<<"\n"; 
+    return myFunc;
+}
+
+
 void activeBlock000()
 {
 //BEGIN:Test with Specx
@@ -410,6 +434,60 @@ void activeBlock000()
 
 
 /*=====================================================================================================*/
+/*=====================================================================================================*/
+
+void activeBlockTest001()
+{
+    int nbThreads = 6;
+    long int nbN=1000000;
+    int sizeBlock=nbN/nbThreads;
+    int diffBlock=nbN-sizeBlock*nbThreads;
+    double h=1.0/double(nbN);
+    double integralValue=0.0;
+    std::vector<double> valuesVec;
+    valuesVec.clear();
+
+    auto MyAlgo0001=[&](const int& k) {  
+        std::cout<<"wValue k="<<k<< std::endl;
+        usleep(1000);
+    return true;};
+
+
+    auto MyAlgo000=[h,sizeBlock,&valuesVec](const int& k) {  
+            std::cout<<"wValue k="<<k<< std::endl;
+            int vkBegin=k*sizeBlock;
+            int vkEnd=(k+1)*sizeBlock;
+            double sum=0.0; double x;
+            for(int j=vkBegin;j<vkEnd;j++)
+            {
+                x=h*double(j);
+                sum+=4.0/(1.0+x*x);
+            }
+            valuesVec.push_back(sum);      
+        return true;
+    };
+
+    TasksDispach FgCalculIntegral; 
+    FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
+    FgCalculIntegral.run(MyAlgo000);
+    for (auto it = valuesVec.begin(); it != valuesVec.end(); it++) { std::cout << *it << " "; }
+    std::cout << "\n"; 
+    integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
+    std::cout<<"PI Value= "<<integralValue<<"\n";
+
+
+    valuesVec.clear();
+    FgCalculIntegral.init(1,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
+    FgCalculIntegral.run(MyAlgo000);
+    for (auto it = valuesVec.begin(); it != valuesVec.end(); it++) { std::cout << *it << " "; }
+    std::cout << "\n"; 
+    integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
+    std::cout<<"PI Value= "<<integralValue<<"\n";
+}
+
+
+/*=====================================================================================================*/
+/*=====================================================================================================*/
 
 
 void activeBlock001()
@@ -424,7 +502,7 @@ void activeBlock001()
 
 
     auto MyAlgo000=[&](const int& k) {  
-        //std::cout<<"wValue k="<<k<< std::endl;
+        std::cout<<"wValue k="<<k<< std::endl;
         wValueOut++; 
         usleep(1000);
     return true;};
@@ -570,6 +648,7 @@ int main(int argc, const char** argv) {
   std::cout << std::endl;
 
 
+  activeBlockTest001();
 
   std::cout << "<<< The End >>>" << std::endl << std::endl;
   return 0;
