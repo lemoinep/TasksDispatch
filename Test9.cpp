@@ -670,6 +670,7 @@ int main(int argc, const char** argv) {
 
 
   std::cout << std::endl;
+  std::cout << "<<< ====================================== >>>" << std::endl;
   std::cout << "<<< Test calcul intergral  >>>" << std::endl;
   activeBlockTest001();
   std::cout << std::endl;
