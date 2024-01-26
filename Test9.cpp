@@ -806,7 +806,6 @@ int main(int argc, const char** argv) {
   std::cout << std::endl;
   // BEGIN::END BENCHMARKS
 
-
   std::cout << std::endl;
   std::cout << "<<< Block003: Detached Future >>>" << std::endl;
   activeBlock003();
