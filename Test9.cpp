@@ -36,9 +36,41 @@
 #include "Utils/SpConsumerThread.hpp"
 
 
+#define clrscr() printf("\033[H\033[2J")
+#define color(param) printf("\033[%sm",param)
+
+/* 
+    0  réinitialisation         1  haute intensité (des caractères)
+    5  clignotement             7  video inversé
+    30, 31, 32, 33, 34, 35, 36, 37 couleur des caractères
+    40, 41, 42, 43, 44, 45, 46, 47 couleur du fond
+    noir, rouge, vert, jaune, bleu, magenta, cyan et blanc 
+    0,      1,    2,     3,     4,     5,      6,      7
+    color("40;37")               
+*/
+
+
+void Color(int number)
+{
+    if (number>7) { number=number % 8; }
+    number+=30;
+    printf("\033[%im",number);
+}
+
+void ColorBackground(int number)
+{
+    if (number>7) { number=number % 8; }
+    number+=40;
+    printf("\033[%im",number);
+}
+
+
 /*=====================================================================================================*/
 
 //ADD class Artifac 
+
+
+
 
 class TasksDispach
 {
@@ -462,7 +494,7 @@ void activeBlock000()
 void activeBlockTest001()
 {
     //CALCUL DE PI par les deux méthodes std::async et Specx
-    int nbThreads = 6;
+    int nbThreads = 9;
     long int nbN=1000000;
     int sizeBlock=nbN/nbThreads;
     int diffBlock=nbN-sizeBlock*nbThreads;
@@ -491,7 +523,9 @@ void activeBlockTest001()
     TasksDispach FgCalculIntegral; 
     FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
     FgCalculIntegral.run(MyAlgo000);
-    for (auto it = valuesVec.begin(); it != valuesVec.end(); it++) { std::cout << *it << " "; }
+    std::cout << "Vec R= "; 
+    for (int k=0; k<valuesVec.size(); k++) { Color(k);std::cout << valuesVec[k] << " "; }
+    Color(7);
     std::cout << "\n"; 
     integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
     std::cout<<"PI Value= "<<integralValue<<"\n";
@@ -500,7 +534,10 @@ void activeBlockTest001()
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
     FgCalculIntegral.init(1,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
     FgCalculIntegral.run(MyAlgo000);
-    for (auto it = valuesVec.begin(); it != valuesVec.end(); it++) { std::cout << *it << " "; }
+    std::cout << "Vec R= "; 
+    for (int k=0; k<valuesVec.size(); k++) { Color(k);std::cout << valuesVec[k] << " "; }
+    Color(7);
+
     std::cout << "\n"; 
     integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
     std::cout<<"PI Value= "<<integralValue<<"\n";
@@ -509,17 +546,21 @@ void activeBlockTest001()
 void activeBlockTest002()
 {
     //ADD 2 vectors
-    int nbThreads = 3;
-    long int nbN=12;
+    int nbThreads = 4;
+    //long int nbN=12;
+    long int nbN=4*6;
     int sizeBlock=nbN/nbThreads;
     int diffBlock=nbN-sizeBlock*nbThreads;
     std::vector<int> VecA;
     std::vector<int> VecB;
     for(int i=0;i<nbN;i++) { 
         VecA.push_back(i);  
-        VecB.push_back(nbN-i);    
+        //VecB.push_back(nbN-i);    
+        VecB.push_back(i);   
     }
-    std::vector<int> VecR;
+    //std::vector<int> VecR;
+    std::vector<int> VecR(nbN,0);
+
     auto MyAlgo000=[VecA,VecB,sizeBlock,&VecR](const int& k) {  
             //std::cout<<"wValue k="<<k<< std::endl;
             int vkBegin=k*sizeBlock;
@@ -532,6 +573,7 @@ void activeBlockTest002()
     };
 
     std::cout<<"Calcul with std::async"<<"\n";
+    VecR.clear();
     TasksDispach FgCalcul; 
     FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachSum");
     FgCalcul.run(MyAlgo000);
@@ -542,9 +584,11 @@ void activeBlockTest002()
     for (auto it = VecB.begin(); it != VecB.end(); it++) { std::cout << *it << " "; }
     std::cout << "\n"; 
     std::cout << "Vec R= "; 
-    for (auto it = VecR.begin(); it != VecR.end(); it++) { std::cout << *it << " "; }
-    std::cout << "\n"; 
+    for (int k=0; k<VecR.size(); k++) { Color(k/sizeBlock);std::cout << VecR[k] << " "; }
+    Color(7);
 
+    std::cout << "\n";
+    std::cout << "\n"; 
     std::cout<<"Calcul with Specx"<<"\n";
     VecR.clear();
     FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachSum");
@@ -556,9 +600,9 @@ void activeBlockTest002()
     for (auto it = VecB.begin(); it != VecB.end(); it++) { std::cout << *it << " "; }
     std::cout << "\n"; 
     std::cout << "Vec R= "; 
-    for (auto it = VecR.begin(); it != VecR.end(); it++) { std::cout << *it << " "; }
-    std::cout << "\n"; 
-
+    for (int k=0; k<VecR.size(); k++) { Color(k/sizeBlock);std::cout << VecR[k] << " "; }
+    Color(7);
+    std::cout << "\n"<< "\n"; 
 }
 
 
@@ -748,6 +792,21 @@ int main(int argc, const char** argv) {
   activeBlock002();
   std::cout << std::endl;
 
+  // BEGIN::TEST BENCHMARKS
+  std::cout << std::endl;
+  std::cout << "<<< ====================================== >>>" << std::endl;
+  std::cout << "<<< Test calcul intergral  >>>" << std::endl;
+  activeBlockTest001();
+  std::cout << std::endl;
+
+  std::cout << std::endl;
+  std::cout << "<<< ====================================== >>>" << std::endl;
+  std::cout << "<<< Test calcul sum vector  >>>" << std::endl;
+  activeBlockTest002();
+  std::cout << std::endl;
+  // BEGIN::END BENCHMARKS
+
+
   std::cout << std::endl;
   std::cout << "<<< Block003: Detached Future >>>" << std::endl;
   activeBlock003();
@@ -765,15 +824,10 @@ int main(int argc, const char** argv) {
 
 
 
-  std::cout << std::endl;
-  std::cout << "<<< ====================================== >>>" << std::endl;
-  std::cout << "<<< Test calcul intergral  >>>" << std::endl;
-  activeBlockTest001();
-  std::cout << std::endl;
 
 
-  activeBlockTest002();
 
   std::cout << "<<< The End >>>" << std::endl << std::endl;
+  Color(7);
   return 0;
 }
