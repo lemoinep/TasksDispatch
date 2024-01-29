@@ -494,7 +494,7 @@ void activeBlock000()
 void activeBlockTest001()
 {
     //CALCUL DE PI par les deux méthodes std::async et Specx
-    int nbThreads = 9;
+    int nbThreads = 6;
     long int nbN=1000000;
     int sizeBlock=nbN/nbThreads;
     int diffBlock=nbN-sizeBlock*nbThreads;
@@ -524,18 +524,20 @@ void activeBlockTest001()
     FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
     FgCalculIntegral.run(MyAlgo000);
     std::cout << "Vec R= "; 
-    for (int k=0; k<valuesVec.size(); k++) { Color(k);std::cout << valuesVec[k] << " "; }
+    for (int k=0; k<valuesVec.size(); k++) { Color(k+1); std::cout << valuesVec[k] << " "; }
     Color(7);
     std::cout << "\n"; 
     integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
     std::cout<<"PI Value= "<<integralValue<<"\n";
 
+    std::cout<<"\n";
+    std::cout<<"\n";
     std::cout<<"PI method std::async"<<"\n";
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
     FgCalculIntegral.init(1,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
     FgCalculIntegral.run(MyAlgo000);
     std::cout << "Vec R= "; 
-    for (int k=0; k<valuesVec.size(); k++) { Color(k);std::cout << valuesVec[k] << " "; }
+    for (int k=0; k<valuesVec.size(); k++) { Color(k+1); std::cout << valuesVec[k] << " "; }
     Color(7);
 
     std::cout << "\n"; 
@@ -584,7 +586,7 @@ void activeBlockTest002()
     for (auto it = VecB.begin(); it != VecB.end(); it++) { std::cout << *it << " "; }
     std::cout << "\n"; 
     std::cout << "Vec R= "; 
-    for (int k=0; k<VecR.size(); k++) { Color(k/sizeBlock);std::cout << VecR[k] << " "; }
+    for (int k=0; k<VecR.size(); k++) { Color(k/sizeBlock+1);std::cout << VecR[k] << " "; }
     Color(7);
 
     std::cout << "\n";
@@ -600,10 +602,66 @@ void activeBlockTest002()
     for (auto it = VecB.begin(); it != VecB.end(); it++) { std::cout << *it << " "; }
     std::cout << "\n"; 
     std::cout << "Vec R= "; 
-    for (int k=0; k<VecR.size(); k++) { Color(k/sizeBlock);std::cout << VecR[k] << " "; }
+    for (int k=0; k<VecR.size(); k++) { Color(k/sizeBlock+1);std::cout << VecR[k] << " "; }
     Color(7);
     std::cout << "\n"<< "\n"; 
 }
+
+
+void activeBlockTest003()
+{
+    //Matrix product
+    int nbThreads = 3; int row=3; int col=3;
+    int MatA[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+    int MatB[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    int MatR[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
+
+    for(int i = 0; i < row; i++) {
+        for(int j = 0; j < col; j++) {
+            std::cout << MatA[i][j];
+            std::cout << "\t";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+
+     for(int i = 0; i < row; i++) {
+        for(int j = 0; j < col; j++) {
+            std::cout << MatB[i][j];
+            std::cout << "\t";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+
+     auto MyAlgo000=[MatA,MatB,row,col,&MatR](const int& k) {  
+            //std::cout<<"wValue k="<<k<< std::endl;
+            for(int r=0; r<row; ++r)
+            {
+                int s=0; for(int c=0; c<col; ++c) { s+=MatA[r][c]*MatB[c][k];}
+                MatR[r][k]=s;
+            }
+        return true;
+    };
+
+    TasksDispach FgCalcul; 
+    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachMult");
+    FgCalcul.run(MyAlgo000);
+
+    for(int i = 0; i < row; i++) {
+        for(int j = 0; j < col; j++) {
+            Color(j);
+            std::cout << MatR[i][j];
+            std::cout << "\t";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+    Color(7);
+
+    std::cout << "\n"<< "\n"; 
+}
+
 
 
 /*=====================================================================================================*/
@@ -804,6 +862,13 @@ int main(int argc, const char** argv) {
   std::cout << "<<< Test calcul sum vector  >>>" << std::endl;
   activeBlockTest002();
   std::cout << std::endl;
+
+  std::cout << std::endl;
+  std::cout << "<<< ====================================== >>>" << std::endl;
+  std::cout << "<<< Test calcul matrix product  >>>" << std::endl;
+  activeBlockTest003();
+  std::cout << std::endl;
+
   // BEGIN::END BENCHMARKS
 
   std::cout << std::endl;
