@@ -650,7 +650,7 @@ void activeBlockTest003()
 
     for(int i = 0; i < row; i++) {
         for(int j = 0; j < col; j++) {
-            Color(j);
+            Color(j+1);
             std::cout << MatR[i][j];
             std::cout << "\t";
         }
