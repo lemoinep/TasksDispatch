@@ -1,6 +1,8 @@
 
 #include <thread>
 #include <vector>
+#include <array>
+#include <typeinfo>
 #include <iostream>
 #include <mutex>
 #include <sched.h>
@@ -34,6 +36,9 @@
 #include "Utils/SpTimer.hpp"
 #include "Utils/small_vector.hpp"
 #include "Utils/SpConsumerThread.hpp"
+
+
+#include "napp.hpp"
 
 
 #define clrscr() printf("\033[H\033[2J")
@@ -85,6 +90,7 @@ class TasksDispach
         bool QSave;
         bool QSlipt;
         bool QDeferred;
+        bool QViewChrono;
         std::string FileName;
 
         auto begin(); 
@@ -97,14 +103,16 @@ class TasksDispach
         template<class Function>
             Function run(Function myFunc);
                 template<class Function>
+                    Function sub_run_multithread(Function myFunc);
+                template<class Function>
                     Function sub_run_async(Function myFunc);
                 template<class Function>
                     Function sub_run_specx_W(Function myFunc);
                 template<class Function>
                     Function sub_run_specx_R(Function myFunc);
 
-        template<class Function,class ArgR,class ArgW>
-            Function sub_run_specx_RW(Function myFunc,ArgR myArgR,ArgW myArgW);
+        template<class ArgR,class ArgW,class Function>
+            Function sub_run_specx_RW(ArgR myArgR,ArgW myArgW,Function myFunc);
 
         template<class InputIterator, class Function>
             Function for_each(InputIterator first, InputIterator last,Function myFunc);
@@ -122,6 +130,8 @@ TasksDispach::TasksDispach() {
     FileName="TestDispach";
     QSlipt=false;
     QDeferred=false;
+    QViewChrono=true;
+    QViewChrono=false;
     initIndice();
 }
 
@@ -147,12 +157,7 @@ auto TasksDispach::size()
 void TasksDispach::initIndice()
 {
     indice.clear();
-    //std::cout<<"nbTh="<<nbTh<<" Indice size="<<indice.size()<<"\n";
-    //indice(nbTh,0);
     for (int i = 1; i <= nbTh; ++i)  { indice.push_back(i); }
-    //for (int x : indice) { std::cout << x << " "; }
-    //std::cout<<"\n";
-    //std::cout<<"nbTh="<<nbTh<<" Indice size="<<indice.size()<<"\n";
 }
 
 void TasksDispach::init(int numType,int nbThread,bool QsaveInfo)
@@ -215,9 +220,35 @@ Function TasksDispach::for_each(InputIterator first, InputIterator last,Function
 
 
 template<class Function>
+Function TasksDispach::sub_run_multithread(Function myFunc)
+{
+  
+   bool QInfo=true;  
+        auto begin = std::chrono::steady_clock::now();
+        std::vector<std::thread> mythreads;
+        for(int k= 0; k < nbTh; ++k){ 
+            auto const& idk = k;
+            std::cout<<"Call num Multithread ="<<k<<"\n";
+            std::thread th(myFunc,idk);
+            mythreads.push_back(move(th));
+        }
+        for (std::thread &t : mythreads) {
+            t.join();
+        }
+        auto end = std::chrono::steady_clock::now();
+        if (QInfo) { std::cout<<"\n"; }
+        if (QViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
+    return myFunc;
+}
+
+
+
+
+template<class Function>
 Function TasksDispach::sub_run_async(Function myFunc)
 {
    bool QInfo=true; 
+        auto begin = std::chrono::steady_clock::now();
         std::vector< std::future< bool > > futures;
         for(int k= 0; k < nbTh; ++k){ 
             auto const& idk = k;
@@ -226,7 +257,9 @@ Function TasksDispach::sub_run_async(Function myFunc)
             else { futures.emplace_back(std::async(std::launch::async,myFunc,idk)); }
         }
         for( auto& r : futures){ auto a =  r.get(); }
+        auto end = std::chrono::steady_clock::now();
         if (QInfo) { std::cout<<"\n"; }
+        if (QViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n";std::cout<<"\n"; }
     return myFunc;
 }
 
@@ -234,6 +267,7 @@ template<class Function>
 Function TasksDispach::sub_run_specx_W(Function myFunc)
 {
    bool QInfo=true; 
+        auto begin = std::chrono::steady_clock::now();
         SpRuntime runtime(nbTh);  
         nbTh= runtime.getNbThreads();
         int iValue=0;
@@ -250,17 +284,19 @@ Function TasksDispach::sub_run_specx_W(Function myFunc)
                 {
                     runtime.task(SpWrite(valuesVec.at(idk)),myFunc).setTaskName("Op("+std::to_string(idk)+")");
                 }
-            usleep(1);
-            std::atomic_int counter(0);
+            //usleep(1);
+            //std::atomic_int counter(0);
         }
         runtime.waitAllTasks();
         runtime.stopAllThreads();
+        auto end = std::chrono::steady_clock::now();
         if (QSave)
         {
             runtime.generateDot(FileName+".dot", true);
             runtime.generateTrace(FileName+".svg");   
         }
         if (QInfo) { std::cout<<"\n"; }
+        if (QViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n";std::cout<<"\n"; }
     return myFunc;
 }
 
@@ -269,6 +305,7 @@ template<class Function>
 Function TasksDispach::sub_run_specx_R(Function myFunc)
 {
    bool QInfo=true; 
+        auto begin = std::chrono::steady_clock::now();
         SpRuntime runtime(nbTh);  
         nbTh= runtime.getNbThreads();
         int iValue=0;
@@ -277,56 +314,78 @@ Function TasksDispach::sub_run_specx_R(Function myFunc)
             auto const& idk = k;
             if (QInfo) { std::cout<<"Call num Thread Read Specx="<<idk<<"\n"; }
             runtime.task(SpRead(idk),myFunc).setTaskName("Op("+std::to_string(idk)+")");
-            usleep(1);
+            usleep(0);
             std::atomic_int counter(0);
         }
         runtime.waitAllTasks();
         runtime.stopAllThreads();
+        auto end = std::chrono::steady_clock::now();
         if (QSave)
         {
             runtime.generateDot(FileName+".dot", true);
             runtime.generateTrace(FileName+".svg");   
         }
+        
         if (QInfo) { std::cout<<"\n"; }
+        if (QViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
     return myFunc;
 }
 
-template<class Function,class ArgR,class ArgW>
-Function TasksDispach::sub_run_specx_RW(Function myFunc,ArgR myArgR,ArgW myArgW)
+template<class ArgR,class ArgW,class Function>
+Function TasksDispach::sub_run_specx_RW(ArgR myArgR,ArgW myArgW,Function myFunc)
 {
    bool QInfo=true; 
+        auto begin = std::chrono::steady_clock::now();
         SpRuntime runtime(nbTh);  
         nbTh= runtime.getNbThreads();
         int iValue=0;
         for(int k= 0; k < nbTh; ++k)
         { 
-            auto const& idk = k;
-            if (QInfo) { std::cout<<"Call num Thread Read Specx="<<idk<<"\n"; }
-            runtime.task(SpRead(myArgR),SpWrite(myArgW),myFunc).setTaskName("Op("+std::to_string(idk)+")");
-            usleep(1);
+            if (QInfo) { std::cout<<"Call num Thread Read Specx="<<k<<"\n"; }
+            runtime.task(SpRead(myArgR),SpWrite(myArgW),myFunc).setTaskName("Op("+std::to_string(k)+")");
+            //usleep(1);
             std::atomic_int counter(0);
         }
         runtime.waitAllTasks();
         runtime.stopAllThreads();
+        auto end = std::chrono::steady_clock::now(); 
         if (QSave)
         {
             runtime.generateDot(FileName+".dot", true);
             runtime.generateTrace(FileName+".svg");   
         }
+              
         if (QInfo) { std::cout<<"\n"; }
+        if (QViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
     return myFunc;
 }
+
+
 
 
 template<class Function>
 Function TasksDispach::run(Function myFunc)
 {
-   if (numTypeTh==1) return sub_run_async(myFunc);
-   if (numTypeTh==2) return sub_run_specx_R(myFunc);
-   if (numTypeTh==3) return sub_run_specx_W(myFunc);
+  switch(numTypeTh) {
+    case 1: return(sub_run_async(myFunc));
+    break;
+    case 2: return(sub_run_specx_R(myFunc));
+    break;
+    case 3: return(sub_run_specx_W(myFunc));
+    break;
+    default:
+        return(sub_run_multithread(myFunc));
+  }
 }
 
 
+/*=====================================================================================================*/
+/*=====================================================================================================*/
+
+
+
+
+/*=====================================================================================================*/
 /*=====================================================================================================*/
 
 template<class Function, class... Args>
@@ -513,23 +572,12 @@ void activeBlockTest001()
                 x=h*double(j);
                 sum+=4.0/(1.0+x*x);
             }
-            valuesVec.push_back(sum);      
+            valuesVec.push_back(sum);  
+            //std::cout<<"Sum "<<sum<<"\n";    
         return true;
     };
-
-
-    std::cout<<"PI method Specx"<<"\n";
-    valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
+   
     TasksDispach FgCalculIntegral; 
-    FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
-    FgCalculIntegral.run(MyAlgo000);
-    std::cout << "Vec R= "; 
-    for (int k=0; k<valuesVec.size(); k++) { Color(k+1); std::cout << valuesVec[k] << " "; }
-    Color(7);
-    std::cout << "\n"; 
-    integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
-    std::cout<<"PI Value= "<<integralValue<<"\n";
-
     std::cout<<"\n";
     std::cout<<"\n";
     std::cout<<"PI method std::async"<<"\n";
@@ -543,7 +591,58 @@ void activeBlockTest001()
     std::cout << "\n"; 
     integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
     std::cout<<"PI Value= "<<integralValue<<"\n";
+
+
+    std::cout<<"PI method Specx"<<"\n";
+    valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
+    FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
+    FgCalculIntegral.run(MyAlgo000);
+    std::cout << "Vec R= "; 
+    for (int k=0; k<valuesVec.size(); k++) { Color(k+1); std::cout << valuesVec[k] << " "; }
+    Color(7);
+    std::cout << "\n"; 
+    integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
+    std::cout<<"PI Value= "<<integralValue<<"\n";
 }
+
+void activeBlockTest001B()
+{
+    //CALCUL DE PI par les deux méthodes std::async et Specx
+    int nbThreads = 6;
+    long int nbN=1000000;
+    int sizeBlock=nbN/nbThreads;
+    int diffBlock=nbN-sizeBlock*nbThreads;
+    double h=1.0/double(nbN);
+    double integralValue=0.0;
+    double R[nbThreads];
+    for (int k=0; k<nbThreads; k++) { R[k]=0.0; }
+
+    auto MyAlgo000=[h,sizeBlock,&R](const int& k) {  
+            int vkBegin=k*sizeBlock;
+            int vkEnd=(k+1)*sizeBlock;
+            double sum=0.0; double x;
+            for(int j=vkBegin;j<vkEnd;j++)
+            {
+                x=h*double(j);
+                sum+=4.0/(1.0+x*x);
+            }
+            R[k]=sum;      
+            std::cout<<"Sum "<<R[k]<<"\n";
+        return true;
+    };
+   
+    TasksDispach FgCalculIntegral; 
+    std::cout<<"PI method Specx"<<"\n";
+    FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); //FgCalculIntegral.QSlipt=true;
+    FgCalculIntegral.sub_run_specx_R(MyAlgo000);
+    std::cout << "Vec R= "; 
+    for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << R[k] << " "; integralValue=integralValue+R[k]; }
+    Color(7);
+    std::cout << "\n"; 
+    integralValue=h*integralValue; 
+    std::cout<<"PI Value= "<<integralValue<<"\n";
+}
+
 
 void activeBlockTest002()
 {
@@ -577,7 +676,7 @@ void activeBlockTest002()
     std::cout<<"Calcul with std::async"<<"\n";
     VecR.clear();
     TasksDispach FgCalcul; 
-    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachSum");
+    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachSum"); 
     FgCalcul.run(MyAlgo000);
     std::cout << "Vec A= "; 
     for (auto it = VecA.begin(); it != VecA.end(); it++) { std::cout << *it << " "; }
@@ -593,7 +692,7 @@ void activeBlockTest002()
     std::cout << "\n"; 
     std::cout<<"Calcul with Specx"<<"\n";
     VecR.clear();
-    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachSum");
+    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachSum"); //FgCalcul.QSave=false;
     FgCalcul.run(MyAlgo000);
     std::cout << "Vec A= "; 
     for (auto it = VecA.begin(); it != VecA.end(); it++) { std::cout << *it << " "; }
@@ -607,6 +706,19 @@ void activeBlockTest002()
     std::cout << "\n"<< "\n"; 
 }
 
+void WriteMat(int Mat[][3],int row,int col)
+{
+    for(int i = 0; i < row; i++) {
+        for(int j = 0; j < col; j++) {
+            Color(j+1);
+            std::cout << Mat[i][j];
+            std::cout << "\t";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
+    Color(7);
+}
 
 void activeBlockTest003()
 {
@@ -616,24 +728,9 @@ void activeBlockTest003()
     int MatB[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     int MatR[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 
-    for(int i = 0; i < row; i++) {
-        for(int j = 0; j < col; j++) {
-            std::cout << MatA[i][j];
-            std::cout << "\t";
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n";
-
-     for(int i = 0; i < row; i++) {
-        for(int j = 0; j < col; j++) {
-            std::cout << MatB[i][j];
-            std::cout << "\t";
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n";
-
+    WriteMat(MatA,row,col);
+    WriteMat(MatB,row,col);
+    
      auto MyAlgo000=[MatA,MatB,row,col,&MatR](const int& k) {  
             //std::cout<<"wValue k="<<k<< std::endl;
             for(int r=0; r<row; ++r)
@@ -648,16 +745,13 @@ void activeBlockTest003()
     FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachMult");
     FgCalcul.run(MyAlgo000);
 
-    for(int i = 0; i < row; i++) {
-        for(int j = 0; j < col; j++) {
-            Color(j+1);
-            std::cout << MatR[i][j];
-            std::cout << "\t";
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n";
-    Color(7);
+    WriteMat(MatR,row,col);
+
+
+    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachMult");
+    FgCalcul.run(MyAlgo000);
+
+    WriteMat(MatR,row,col);
 
     std::cout << "\n"<< "\n"; 
 }
@@ -832,63 +926,268 @@ void activeBlock005()
 }
 
 
+/**NAP */
+
+constexpr auto& _elt1 = NA::identifier<struct elt1_tag>;
+constexpr auto& _elt2 = NA::identifier<struct elt2_tag>;
+constexpr auto& _elt3 = NA::identifier<struct elt3_tag>;
+constexpr auto& _elt4 = NA::identifier<struct elt4_tag>;
+constexpr auto& _elt5 = NA::identifier<struct elt5_tag>;
+
+template <typename ... Ts>
+void func( Ts && ... v )
+{
+    auto args = NA::make_arguments( std::forward<Ts>(v)... );
+
+    std::cout << "elt1 : " << args.get(_elt1) << "\n"
+              << "elt2 : " << args.get_else(_elt2, "a default value" ) << "\n"
+              << "elt4 : " << args.get_else(_elt4, "a default value" ) << "\n"
+              << "elt3 : " << args.get_else_invocable(_elt3, []() {   std::cout<<"HELLO"<< '\n';  return 3.1415; } )
+              << std::endl;
+
+    
+    double n=1.3;
+    n=n+args.get_else(_elt4, "a default value" );
+    std::cout << "v = " << n << "\n";
+
+    int initVal=0;
+    SpRuntime runtime(6);
+     auto task1 =runtime.task(SpRead(initVal),
+            [](const int&){
+                usleep(1000);
+            }
+            );
+
+    runtime.waitAllTasks();
+    runtime.stopAllThreads();
+}
+
+/**NAP 2*/
+using element1 = NA::named_argument_t<struct element1_tag>;
+using element2 = NA::named_argument_t<struct element2_tag>;
+constexpr auto& _element1 = NA::identifier<element1>;
+constexpr auto& _element2 = NA::identifier<element2>;
+constexpr auto& _element3 = NA::identifier<struct element3_tag>;
+constexpr auto& _element4 = NA::identifier<struct element4_tag>;
+
+template <typename ... TT>
+constexpr auto test1( NA::arguments<TT...> && v )
+{
+    auto && e1 = v.template get<element1>();
+    auto && e2 = v.template get_else<element2>( 4 );
+    auto && e3 = v.get(_element3);
+    auto && e4 = v.get_else( _element4, 7 );
+
+    std::cout << "e1=" << e1 << "\n";
+    std::cout << "e2=" << e2 << "\n";
+    std::cout << "e3=" << e3 << "\n";
+    std::cout << "e4=" << e4 << "\n";
+
+    return e1+e2+e3+e4;
+}
+
+template <typename ... Ts>
+constexpr auto test1( Ts && ... v )
+{
+    return test1( NA::make_arguments( std::forward<Ts>(v)... ) );
+}
+
+
+void activeBlock006()
+{
+    func( _elt2=36,_elt1="toto",_elt4=0.5,_elt3=std::string("string as rvalue") );
+    std::cout << std::endl;
+    func( _elt2=36,_elt1="toto",_elt4=0.5);
+    std::cout << std::endl;
+    //float val=10.123;
+    //func( _elt2=val,_elt4=0.5);
+
+    //int x = 200;
+    //float y = 200.790;
+    //std::cout << typeid(x).name() << std::endl;
+    //std::cout << typeid(y).name() << std::endl;
+    //std::cout << typeid(x * y).name() << std::endl;
+    int a=1;
+    auto value=test1( _element1=a,_element2=2,_element3=3,_element4=4);
+    
+    std::cout <<value<< std::endl;
+    std::cout << std::endl;
+    
+}
+
+//TEST THREAD WITH FIXED CPU
+
+void *WorkerCPU_Beta(void *param) {
+  std::cout<<(char*) param<<std::endl;
+  std::cout<<"Hello back form CPU="<< sched_getcpu()<<std::endl;
+  //pthread_exit(NULL);
+  char *ret;
+  strcpy(ret, "Test Output OK");
+  pthread_exit(ret);
+}
+
+void RunTaskInNumCPU_Beta(int idCPU)
+{
+  int ret;
+  cpu_set_t cpuset;
+  CPU_ZERO(&cpuset);
+  CPU_SET(idCPU, &cpuset);
+  pthread_attr_t pta;
+  pthread_attr_init(&pta);
+  pthread_attr_setaffinity_np(&pta, sizeof(cpuset), &cpuset);
+
+  pthread_t thread;
+  char my_thread_msg[] ="Hello send to Thread!";
+  if (pthread_create(&thread, &pta,WorkerCPU_Beta,(void*) my_thread_msg) != 0) { std::cerr << "Error in creating thread" << std::endl; }
+  char *message;
+  ret=pthread_join(thread, (void **)&message);//pthread_join(thread, NULL);
+  if(ret != 0) { perror("pthread_join failed"); exit(EXIT_FAILURE);}
+  std::cout <<message<< "\n"; 
+  pthread_attr_destroy(&pta);
+  //pthread_mutex_t if pb 
+  pthread_exit(NULL);
+}
+
+void RunTaskLoopInSpecifiedCPU(int NbLoop)
+{
+  constexpr unsigned num_threads = 96;
+  // A mutex ensures orderly access to std::cout from multiple threads.
+  std::mutex iomutex;
+  std::vector<std::thread> threads(num_threads);
+
+      for (unsigned i = 0; i < num_threads; ++i) {
+        threads[i] = std::thread(
+          [&iomutex, i, NbLoop] {
+              std::this_thread::sleep_for(std::chrono::milliseconds(20));
+              int iLoop=0; 
+              while (iLoop<NbLoop) 
+              {
+                  iLoop++;
+                  {
+                    std::lock_guard<std::mutex> iolock(iomutex);
+                    std::cout << "Thread #" << i << ": on CPU " << sched_getcpu() <<" NbLoop="<<iLoop<< "\n";
+                  }
+                  std::this_thread::sleep_for(std::chrono::milliseconds(900));  
+              }
+              pthread_exit(NULL);
+          });
+
+        // Create a cpu_set_t object representing a set of CPUs. Clear it and mark
+        // only CPU i as set.
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(i, &cpuset);
+        int rc = pthread_setaffinity_np(threads[i].native_handle(),
+                                        sizeof(cpu_set_t), &cpuset);
+        if (rc != 0) {
+          std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
+        }
+      }
+  for (auto& t : threads) { t.join(); }
+}
+
+
+void activeBlock007()
+{
+    auto MyAlgo000=[&]() {  
+        std::cout<<"OK"<< std::endl;
+        return true;
+    };
+    RunTaskLoopInSpecifiedCPU(1);
+    std::cout << "\n"<< "\n";
+    RunTaskInNumCPU_Beta(2);
+    std::cout << "\n"<< "\n"; 
+}
+
 int main(int argc, const char** argv) {
 
-
+  bool QPlayNext=true;
+  QPlayNext=false;
   //std::cout << std::endl;
   //std::cout << "<<< Block000 >>>" << std::endl;
   //activeBlock000();
   //std::cout << std::endl;
 
-  std::cout << std::endl;
-  std::cout << "<<< Block001 >>>" << std::endl;
-  activeBlock001();
-  std::cout << std::endl;
+  if (QPlayNext) {
+    std::cout << std::endl;
+    std::cout << "<<< Block001 >>>" << std::endl;
+    activeBlock001();
+    std::cout << std::endl;
 
-  std::cout << std::endl;
-  std::cout << "<<< Block002 >>>" << std::endl;
-  activeBlock002();
-  std::cout << std::endl;
+    std::cout << std::endl;
+    std::cout << "<<< Block002 >>>" << std::endl;
+    activeBlock002();
+    std::cout << std::endl;
+  }
+
+  QPlayNext=true;
+  QPlayNext=false;
 
   // BEGIN::TEST BENCHMARKS
-  std::cout << std::endl;
-  std::cout << "<<< ====================================== >>>" << std::endl;
-  std::cout << "<<< Test calcul intergral  >>>" << std::endl;
-  activeBlockTest001();
-  std::cout << std::endl;
+  if (QPlayNext) {
+    std::cout << std::endl;
+    std::cout << "<<< ====================================== >>>" << std::endl;
+    std::cout << "<<< Test calcul intergral  >>>" << std::endl;
+    activeBlockTest001();
+    std::cout << std::endl;
 
-  std::cout << std::endl;
-  std::cout << "<<< ====================================== >>>" << std::endl;
-  std::cout << "<<< Test calcul sum vector  >>>" << std::endl;
-  activeBlockTest002();
-  std::cout << std::endl;
+    std::cout << std::endl;
+    std::cout << "<<< ====================================== >>>" << std::endl;
+    std::cout << "<<< Test calcul sum vector  >>>" << std::endl;
+    activeBlockTest002();
+    std::cout << std::endl;
 
-  std::cout << std::endl;
-  std::cout << "<<< ====================================== >>>" << std::endl;
-  std::cout << "<<< Test calcul matrix product  >>>" << std::endl;
-  activeBlockTest003();
-  std::cout << std::endl;
-
+    std::cout << std::endl;
+    std::cout << "<<< ====================================== >>>" << std::endl;
+    std::cout << "<<< Test calcul matrix product  >>>" << std::endl;
+    activeBlockTest003();
+    std::cout << std::endl;
+  }
   // BEGIN::END BENCHMARKS
 
-  std::cout << std::endl;
-  std::cout << "<<< Block003: Detached Future >>>" << std::endl;
-  activeBlock003();
-  std::cout << std::endl;
+  QPlayNext=true;
+  QPlayNext=false;
 
-  std::cout << std::endl;
-  std::cout << "<<< Block004: Detached Future 2 >>>" << std::endl;
-  activeBlock004();
-  std::cout << std::endl;
+  if (QPlayNext) {
+    std::cout << std::endl;
+    std::cout << "<<< Block003: Detached Future >>>" << std::endl;
+    activeBlock003();
+    std::cout << std::endl;
 
-  std::cout << std::endl;
-  std::cout << "<<< Block005: Deferred >>>" << std::endl;
-  activeBlock005();
-  std::cout << std::endl;
+    std::cout << std::endl;
+    std::cout << "<<< Block004: Detached Future 2 >>>" << std::endl;
+    activeBlock004();
+    std::cout << std::endl;
+
+    std::cout << std::endl;
+    std::cout << "<<< Block005: Deferred >>>" << std::endl;
+    activeBlock005();
+    std::cout << std::endl;
+  }
+
+  QPlayNext=true;
+  //QPlayNext=false;
+
+if (QPlayNext) {
+    std::cout << std::endl;
+    std::cout << "<<< Block006: NAP  >>>" << std::endl;
+    activeBlock006();
+    std::cout << std::endl;
+}
 
 
+  QPlayNext=true;
+  QPlayNext=false;
+
+if (QPlayNext) {
+    std::cout << std::endl;
+    std::cout << "<<< Block007: Test Multithread Affinity  >>>" << std::endl;
+    activeBlock007();
+    std::cout << std::endl;
+}
 
 
+//activeBlockTest001B();
 
 
   std::cout << "<<< The End >>>" << std::endl << std::endl;
