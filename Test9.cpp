@@ -345,8 +345,8 @@ Function TasksDispach::sub_run_async(Function myFunc)
 template<class Function>
 Function TasksDispach::sub_run_specx_W(Function myFunc)
 {
-        auto begin = std::chrono::steady_clock::now();
         SpRuntime runtime(nbTh);  
+        auto begin = std::chrono::steady_clock::now();
         nbTh= runtime.getNbThreads();
         int iValue=0;
         std::vector<int> valuesVec(nbTh,0); //trick to launch everything at once
@@ -382,12 +382,10 @@ Function TasksDispach::sub_run_specx_W(Function myFunc)
 template<class Function>
 std::vector<double> TasksDispach::sub_run_specx(Function myFunc)
 {
-        auto begin = std::chrono::steady_clock::now();
         SpRuntime runtime(nbTh);  
+        auto begin = std::chrono::steady_clock::now();
         nbTh= runtime.getNbThreads();
-        int iValue=0;
         std::vector<double> valuesVec(nbTh,0); //trick to launch everything at once
-
         for(int k= 0; k < nbTh; ++k)
         { 
             auto const& idk = k;
@@ -413,8 +411,9 @@ std::vector<double> TasksDispach::sub_run_specx(Function myFunc)
 template<class Function>
 Function TasksDispach::sub_run_specx_R(Function myFunc)
 {
-        auto begin = std::chrono::steady_clock::now();
+        
         SpRuntime runtime(nbTh);  
+        auto begin = std::chrono::steady_clock::now();
         nbTh= runtime.getNbThreads();
         int iValue=0;
         for(int k= 0; k < nbTh; ++k)
@@ -1233,6 +1232,7 @@ void activeBlockTestSpecxVector1(int time_sleep)
     runtime.generateTrace("Test.svg");   
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
     std::cout << "\n"; 
+    Color(7);
     std::cout << "\n"; 
 }
 
@@ -1241,7 +1241,7 @@ void activeBlockTestSpecxVector2(int time_sleep)
     int nbThreads = 96;
     auto MyAlgo000=[time_sleep](const int i,double& s) {  
             double sum=0.0; 
-            for(int j=0;j<10;j++)
+            for(int j=0;j<100;j++)
             { 
                 sum+=double(j);
             }
@@ -1252,10 +1252,46 @@ void activeBlockTestSpecxVector2(int time_sleep)
 
     TasksDispach Fg; 
     Fg.setFileName("Test"); 
-    Fg.init(1,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true;
+    Fg.init(1,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true; Fg.qSave=true;
     std::vector<double> valuesVec=Fg.sub_run_specx(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
     std::cout << "\n"; 
+    Color(7);
+    std::cout << "\n"; 
+}
+
+void activeBlockTestSpecxVector3(int time_sleep)
+{
+    int nbThreads = 96;
+    double integralValue=0.0;
+    double R[nbThreads];
+    for (int k=0; k<nbThreads; k++) { R[k]=0.0; }
+
+    auto MyAlgo000=[&R,time_sleep](const int& i) {  
+            double sum=0.0; 
+            for(int j=0;j<100;j++)
+            { 
+                sum+=double(j);
+            }
+            usleep(time_sleep);
+            R[i]=sum+i;      
+        return true;
+    };
+   
+    std::cout<<"With std:async"<< "\n";
+    TasksDispach Fg; 
+    Fg.setFileName("Test"); 
+    Fg.init(1,nbThreads,true);  Fg.qInfo=false;  Fg.qViewChrono=true;
+    Fg.run(MyAlgo000);
+    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << R[k] << " ";  } 
+    std::cout << "\n"; 
+    Color(7);
+    std::cout << "\n"; 
+    std::cout<<"With std:thread"<< "\n";
+    Fg.sub_run_multithread(MyAlgo000);
+    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << R[k] << " ";  } 
+    std::cout << "\n"; 
+    Color(7);
     std::cout << "\n"; 
 }
 
@@ -1367,7 +1403,9 @@ if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Test Vector with specx  >>>" << std::endl;
     //activeBlockTestSpecxVector1(10000);
-    activeBlockTestSpecxVector2(10000);
+    activeBlockTestSpecxVector3(100000);
+    std::cout<<"With specx"<< "\n";
+    activeBlockTestSpecxVector2(100000);
     std::cout << std::endl;
 }
 
