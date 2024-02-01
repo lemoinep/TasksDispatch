@@ -798,7 +798,9 @@ void activeBlockTest003()
     int MatB[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     int MatR[3][3] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
 
+    std::cout<<"MatA"<< "\n";
     WriteMat(MatA,row,col);
+    std::cout<<"MatB"<< "\n";
     WriteMat(MatB,row,col);
     
      auto MyAlgo000=[MatA,MatB,row,col,&MatR](const int& k) {  
@@ -815,12 +817,14 @@ void activeBlockTest003()
     FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachMult");
     FgCalcul.run(MyAlgo000);
 
+    std::cout<<"MatR=MatA*MatB with STD::ASYNC"<< "\n";
     WriteMat(MatR,row,col);
 
 
     FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachMult");
     FgCalcul.run(MyAlgo000);
 
+    std::cout<<"MatR=MatA*MatB with Specx"<< "\n";
     WriteMat(MatR,row,col);
 
     std::cout << "\n"<< "\n"; 
@@ -1301,11 +1305,8 @@ int main(int argc, const char** argv) {
 
   bool qPlayNext=true;
   qPlayNext=false;
-  //std::cout << std::endl;
-  //std::cout << "<<< Block000 >>>" << std::endl;
-  //activeBlock000();
-  //std::cout << std::endl;
 
+// BEGIN::TESTS 
   if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Block001 >>>" << std::endl;
@@ -1317,9 +1318,10 @@ int main(int argc, const char** argv) {
     activeBlock002();
     std::cout << std::endl;
   }
+// END::TESTS 
 
   qPlayNext=true;
-  qPlayNext=false;
+  //qPlayNext=false;
 
   // BEGIN::TEST BENCHMARKS
   if (qPlayNext) {
@@ -1341,11 +1343,12 @@ int main(int argc, const char** argv) {
     activeBlockTest003();
     std::cout << std::endl;
   }
-  // BEGIN::END BENCHMARKS
+  // END::TEST BENCHMARKS
 
   qPlayNext=true;
   qPlayNext=false;
 
+ // BEGIN::TEST DETACH
   if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Block003: Detached Future >>>" << std::endl;
@@ -1362,27 +1365,33 @@ int main(int argc, const char** argv) {
     activeBlock005();
     std::cout << std::endl;
   }
+// END::TEST DETACH
+
 
   qPlayNext=true;
   qPlayNext=false;
 
+// BEGIN::TEST NAP
 if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Block006: NAP  >>>" << std::endl;
     activeBlock006();
     std::cout << std::endl;
 }
+// END::TEST NAP
 
 
   qPlayNext=true;
   qPlayNext=false;
 
+// BEGIN::TEST MULTITHREAD AFFINITY
 if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Block007: Test Multithread Affinity  >>>" << std::endl;
     activeBlock007();
     std::cout << std::endl;
 }
+// END::TEST MULTITHREAD AFFINITY
 
 
   qPlayNext=true;
@@ -1399,15 +1408,17 @@ if (qPlayNext) {
   qPlayNext=true;
   //qPlayNext=false;
 
+// BEGIN::TEST VECTORS LIST THREAD
 if (qPlayNext) {
     std::cout << std::endl;
-    std::cout << "<<< Test Vector with specx  >>>" << std::endl;
+    std::cout << "<<< Test Vector  >>>" << std::endl;
     //activeBlockTestSpecxVector1(10000);
     activeBlockTestSpecxVector3(100000);
     std::cout<<"With specx"<< "\n";
     activeBlockTestSpecxVector2(100000);
     std::cout << std::endl;
 }
+// END::TEST VECTORS LIST THREAD
 
 
 //activeBlockTest001B();
