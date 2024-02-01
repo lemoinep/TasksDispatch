@@ -688,10 +688,10 @@ void activeBlockTest001()
     std::cout<<"\n";
     std::cout<<"PI method std::async"<<"\n";
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
-    FgCalculIntegral.init(1,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
+    FgCalculIntegral.init(1,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); FgCalculIntegral.qViewChrono=true;
     FgCalculIntegral.run(MyAlgo000);
-    std::cout << "Vec R= "; 
-    for (int k=0; k<valuesVec.size(); k++) { Color(k+1); std::cout << valuesVec[k] << " "; }
+    //std::cout << "Vec R= "; 
+    //for (int k=0; k<valuesVec.size(); k++) { Color(k+1); std::cout << valuesVec[k] << " "; }
     Color(7);
 
     std::cout << "\n"; 
@@ -701,10 +701,10 @@ void activeBlockTest001()
 
     std::cout<<"PI method Specx"<<"\n";
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
-    FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral");
+    FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); FgCalculIntegral.qViewChrono=true;
     FgCalculIntegral.run(MyAlgo000);
-    std::cout << "Vec R= "; 
-    for (int k=0; k<valuesVec.size(); k++) { Color(k+1); std::cout << valuesVec[k] << " "; }
+    //std::cout << "Vec R= "; 
+    //for (int k=0; k<valuesVec.size(); k++) { Color(k+1); std::cout << valuesVec[k] << " "; }
     Color(7);
     std::cout << "\n"; 
     integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
@@ -746,7 +746,7 @@ void activeBlockTest002()
     std::cout<<"Calcul with std::async"<<"\n";
     VecR.clear();
     TasksDispach FgCalcul; 
-    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachSum"); 
+    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachSum");  FgCalcul.qViewChrono=true;
     FgCalcul.run(MyAlgo000);
     std::cout << "Vec A= "; 
     for (auto it = VecA.begin(); it != VecA.end(); it++) { std::cout << *it << " "; }
@@ -762,7 +762,7 @@ void activeBlockTest002()
     std::cout << "\n"; 
     std::cout<<"Calcul with Specx"<<"\n";
     VecR.clear();
-    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachSum"); //FgCalcul.qSave=false;
+    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachSum"); FgCalcul.qViewChrono=true;    //FgCalcul.qSave=false; 
     FgCalcul.run(MyAlgo000);
     std::cout << "Vec A= "; 
     for (auto it = VecA.begin(); it != VecA.end(); it++) { std::cout << *it << " "; }
@@ -814,14 +814,14 @@ void activeBlockTest003()
     };
 
     TasksDispach FgCalcul; 
-    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachMult");
+    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachMult"); FgCalcul.qViewChrono=true;
     FgCalcul.run(MyAlgo000);
 
     std::cout<<"MatR=MatA*MatB with STD::ASYNC"<< "\n";
     WriteMat(MatR,row,col);
 
 
-    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachMult");
+    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachMult"); FgCalcul.qViewChrono=true;
     FgCalcul.run(MyAlgo000);
 
     std::cout<<"MatR=MatA*MatB with Specx"<< "\n";
