@@ -166,10 +166,11 @@ class TasksDispach
     public:
         int numTypeTh;
         int nbTh;
-        bool QSave;
-        bool QSlipt;
-        bool QDeferred;
-        bool QViewChrono;
+        bool qSave;
+        bool qSlipt;
+        bool qDeferred;
+        bool qViewChrono;
+        bool qInfo;
         std::string FileName;
 
         auto begin(); 
@@ -177,7 +178,7 @@ class TasksDispach
         auto size(); 
 
         int getNbMaxThread();
-        void init(int numType,int nbThread,bool QsaveInfo);
+        void init(int numType,int nbThread,bool qsaveInfo);
         void setFileName(std::string s);
         template<class Function>
             Function run(Function myFunc);
@@ -189,6 +190,8 @@ class TasksDispach
                     Function sub_run_specx_W(Function myFunc);
                 template<class Function>
                     Function sub_run_specx_R(Function myFunc);
+                template<class Function> 
+                    std::vector<double> sub_run_specx(Function myFunc);
 
         template<class ArgR,class ArgW,class Function>
             Function sub_run_specx_RW(ArgR myArgR,ArgW myArgW,Function myFunc);
@@ -205,12 +208,13 @@ TasksDispach::TasksDispach() {
     nbThTotal=std::thread::hardware_concurrency();
     numTypeTh=2; 
     nbTh=1;
-    QSave=false;
+    qSave=false;
     FileName="TestDispach";
-    QSlipt=false;
-    QDeferred=false;
-    QViewChrono=true;
-    QViewChrono=false;
+    qSlipt=false;
+    qDeferred=false;
+    qViewChrono=true;
+    qViewChrono=false;
+    qInfo=false;  
     initIndice();
 }
 
@@ -239,9 +243,9 @@ void TasksDispach::initIndice()
     for (int i = 1; i <= nbTh; ++i)  { indice.push_back(i); }
 }
 
-void TasksDispach::init(int numType,int nbThread,bool QsaveInfo)
+void TasksDispach::init(int numType,int nbThread,bool qsaveInfo)
 {
-    numTypeTh=numType; nbTh=nbThread; QSave=QsaveInfo;
+    numTypeTh=numType; nbTh=nbThread; qSave=qsaveInfo; qInfo=false;  
     initIndice();
 }
 
@@ -261,14 +265,13 @@ int TasksDispach::getNbMaxThread()
 template<class InputIterator, class Function>
 Function TasksDispach::for_each(InputIterator first, InputIterator last,Function myFunc)
 {
-    bool QInfo=true;
         if (numTypeTh==1) {
             std::vector< std::future< bool > > futures;
             for ( ; first!=last; ++first )
             { 
                 auto const& idk = *first;
-                if (QInfo) { std::cout<<"Call num Thread futures="<<idk<<"\n"; }
-                if (QDeferred) { futures.emplace_back(std::async(std::launch::deferred,myFunc,idk)); }
+                if (qInfo) { std::cout<<"Call num Thread futures="<<idk<<"\n"; }
+                if (qDeferred) { futures.emplace_back(std::async(std::launch::deferred,myFunc,idk)); }
                 else { futures.emplace_back(std::async(std::launch::async,myFunc,idk)); }
             }
             for( auto& r : futures){ auto a =  r.get(); }
@@ -280,20 +283,20 @@ Function TasksDispach::for_each(InputIterator first, InputIterator last,Function
             for ( ; first!=last; ++first )
             { 
                 auto const& idk = *first;
-                if (QInfo) { std::cout<<"Call num Thread Read Specx="<<idk<<"\n"; }
+                if (qInfo) { std::cout<<"Call num Thread Read Specx="<<idk<<"\n"; }
                 runtime.task(SpRead(idk),myFunc).setTaskName("Op("+std::to_string(idk)+")");
                 usleep(1);
                 std::atomic_int counter(0);
             }
             runtime.waitAllTasks();
             runtime.stopAllThreads();
-            if (QSave)
+            if (qSave)
             {
                 runtime.generateDot(FileName+".dot", true);
                 runtime.generateTrace(FileName+".svg");   
             }
         }
-        if (QInfo) { std::cout<<"\n"; }
+        if (qInfo) { std::cout<<"\n"; }
     return myFunc;
 }
 
@@ -301,13 +304,11 @@ Function TasksDispach::for_each(InputIterator first, InputIterator last,Function
 template<class Function>
 Function TasksDispach::sub_run_multithread(Function myFunc)
 {
-  
-   bool QInfo=true;  
         auto begin = std::chrono::steady_clock::now();
         std::vector<std::thread> mythreads;
         for(int k= 0; k < nbTh; ++k){ 
             auto const& idk = k;
-            std::cout<<"Call num Multithread ="<<k<<"\n";
+            if (qInfo) { std::cout<<"Call num Multithread ="<<k<<"\n"; }
             std::thread th(myFunc,idk);
             mythreads.push_back(move(th));
         }
@@ -315,8 +316,8 @@ Function TasksDispach::sub_run_multithread(Function myFunc)
             t.join();
         }
         auto end = std::chrono::steady_clock::now();
-        if (QInfo) { std::cout<<"\n"; }
-        if (QViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
+        if (qInfo) { std::cout<<"\n"; }
+        if (qViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
     return myFunc;
 }
 
@@ -326,26 +327,24 @@ Function TasksDispach::sub_run_multithread(Function myFunc)
 template<class Function>
 Function TasksDispach::sub_run_async(Function myFunc)
 {
-   bool QInfo=true; 
         auto begin = std::chrono::steady_clock::now();
         std::vector< std::future< bool > > futures;
         for(int k= 0; k < nbTh; ++k){ 
             auto const& idk = k;
-            if (QInfo) { std::cout<<"Call num Thread futures="<<k<<"\n"; }
-            if (QDeferred) { futures.emplace_back(std::async(std::launch::deferred,myFunc,idk)); }
+            if (qInfo) { std::cout<<"Call num Thread futures="<<k<<"\n"; }
+            if (qDeferred) { futures.emplace_back(std::async(std::launch::deferred,myFunc,idk)); }
             else { futures.emplace_back(std::async(std::launch::async,myFunc,idk)); }
         }
         for( auto& r : futures){ auto a =  r.get(); }
         auto end = std::chrono::steady_clock::now();
-        if (QInfo) { std::cout<<"\n"; }
-        if (QViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n";std::cout<<"\n"; }
+        if (qInfo) { std::cout<<"\n"; }
+        if (qViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n";std::cout<<"\n"; }
     return myFunc;
 }
 
 template<class Function>
 Function TasksDispach::sub_run_specx_W(Function myFunc)
 {
-   bool QInfo=true; 
         auto begin = std::chrono::steady_clock::now();
         SpRuntime runtime(nbTh);  
         nbTh= runtime.getNbThreads();
@@ -355,8 +354,8 @@ Function TasksDispach::sub_run_specx_W(Function myFunc)
         for(int k= 0; k < nbTh; ++k)
         { 
             auto const& idk = k;
-            if (QInfo) { std::cout<<"Call num Thread Write Specx="<<idk<<"\n"; }
-                if (QSlipt) {
+            if (qInfo) { std::cout<<"Call num Thread Write Specx="<<idk<<"\n"; }
+                if (qSlipt) {
                     runtime.task(SpWrite(iValue),myFunc).setTaskName("Op("+std::to_string(idk)+")");
                 }
                 else
@@ -369,21 +368,51 @@ Function TasksDispach::sub_run_specx_W(Function myFunc)
         runtime.waitAllTasks();
         runtime.stopAllThreads();
         auto end = std::chrono::steady_clock::now();
-        if (QSave)
+        if (qSave)
         {
             runtime.generateDot(FileName+".dot", true);
             runtime.generateTrace(FileName+".svg");   
         }
-        if (QInfo) { std::cout<<"\n"; }
-        if (QViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n";std::cout<<"\n"; }
+        if (qInfo) { std::cout<<"\n"; }
+        if (qViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n";std::cout<<"\n"; }
     return myFunc;
 }
 
 
 template<class Function>
+std::vector<double> TasksDispach::sub_run_specx(Function myFunc)
+{
+        auto begin = std::chrono::steady_clock::now();
+        SpRuntime runtime(nbTh);  
+        nbTh= runtime.getNbThreads();
+        int iValue=0;
+        std::vector<double> valuesVec(nbTh,0); //trick to launch everything at once
+
+        for(int k= 0; k < nbTh; ++k)
+        { 
+            auto const& idk = k;
+            if (qInfo) { std::cout<<"Call num Thread Write Specx="<<idk<<"\n"; }
+            runtime.task(SpRead(idk),SpWrite(valuesVec.at(idk)),myFunc).setTaskName("Op("+std::to_string(idk)+")");
+        }
+        runtime.waitAllTasks();
+        runtime.stopAllThreads();
+        auto end = std::chrono::steady_clock::now();
+        if (qSave)
+        {
+            runtime.generateDot(FileName+".dot", true);
+            runtime.generateTrace(FileName+".svg");   
+        }
+        if (qInfo) { std::cout<<"\n"; }
+        if (qViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n";std::cout<<"\n"; }
+
+    return valuesVec;
+}
+
+
+
+template<class Function>
 Function TasksDispach::sub_run_specx_R(Function myFunc)
 {
-   bool QInfo=true; 
         auto begin = std::chrono::steady_clock::now();
         SpRuntime runtime(nbTh);  
         nbTh= runtime.getNbThreads();
@@ -391,7 +420,7 @@ Function TasksDispach::sub_run_specx_R(Function myFunc)
         for(int k= 0; k < nbTh; ++k)
         { 
             auto const& idk = k;
-            if (QInfo) { std::cout<<"Call num Thread Read Specx="<<idk<<"\n"; }
+            if (qInfo) { std::cout<<"Call num Thread Read Specx="<<idk<<"\n"; }
             runtime.task(SpRead(idk),myFunc).setTaskName("Op("+std::to_string(idk)+")");
             usleep(0);
             std::atomic_int counter(0);
@@ -399,28 +428,27 @@ Function TasksDispach::sub_run_specx_R(Function myFunc)
         runtime.waitAllTasks();
         runtime.stopAllThreads();
         auto end = std::chrono::steady_clock::now();
-        if (QSave)
+        if (qSave)
         {
             runtime.generateDot(FileName+".dot", true);
             runtime.generateTrace(FileName+".svg");   
         }
         
-        if (QInfo) { std::cout<<"\n"; }
-        if (QViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
+        if (qInfo) { std::cout<<"\n"; }
+        if (qViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
     return myFunc;
 }
 
 template<class ArgR,class ArgW,class Function>
 Function TasksDispach::sub_run_specx_RW(ArgR myArgR,ArgW myArgW,Function myFunc)
 {
-   bool QInfo=true; 
         auto begin = std::chrono::steady_clock::now();
         SpRuntime runtime(nbTh);  
         nbTh= runtime.getNbThreads();
         int iValue=0;
         for(int k= 0; k < nbTh; ++k)
         { 
-            if (QInfo) { std::cout<<"Call num Thread Read Specx="<<k<<"\n"; }
+            if (qInfo) { std::cout<<"Call num Thread Read Specx="<<k<<"\n"; }
             runtime.task(SpRead(myArgR),SpWrite(myArgW),myFunc).setTaskName("Op("+std::to_string(k)+")");
             //usleep(1);
             std::atomic_int counter(0);
@@ -428,14 +456,14 @@ Function TasksDispach::sub_run_specx_RW(ArgR myArgR,ArgW myArgW,Function myFunc)
         runtime.waitAllTasks();
         runtime.stopAllThreads();
         auto end = std::chrono::steady_clock::now(); 
-        if (QSave)
+        if (qSave)
         {
             runtime.generateDot(FileName+".dot", true);
             runtime.generateTrace(FileName+".svg");   
         }
               
-        if (QInfo) { std::cout<<"\n"; }
-        if (QViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
+        if (qInfo) { std::cout<<"\n"; }
+        if (qViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
     return myFunc;
 }
 
@@ -583,14 +611,14 @@ Function TestSpecxWithTwoParam(Function myFunc)
 template<class Function,class ArgR,class ArgW>
 Function TestSpecxWith3Param(Function myFunc,ArgR myArgR,ArgW myArgW)
 {
-   bool QInfo=true; 
+   bool qInfo=true; 
     SpRuntime runtime(6);  
     int nbTh= runtime.getNbThreads();
         int iValue=0;
         for(int k= 0; k < nbTh; ++k)
         { 
             auto const& idk = k;
-            if (QInfo) { std::cout<<"Call num Thread Read Specx="<<idk<<"\n"; }
+            if (qInfo) { std::cout<<"Call num Thread Read Specx="<<idk<<"\n"; }
             runtime.task(SpRead(myArgR),SpWrite(myArgW),myFunc).setTaskName("Op("+std::to_string(idk)+")");
             usleep(1);
             std::atomic_int counter(0);
@@ -684,43 +712,7 @@ void activeBlockTest001()
     std::cout<<"PI Value= "<<integralValue<<"\n";
 }
 
-void activeBlockTest001B()
-{
-    //CALCUL DE PI par les deux méthodes std::async et Specx
-    int nbThreads = 6;
-    long int nbN=1000000;
-    int sizeBlock=nbN/nbThreads;
-    int diffBlock=nbN-sizeBlock*nbThreads;
-    double h=1.0/double(nbN);
-    double integralValue=0.0;
-    double R[nbThreads];
-    for (int k=0; k<nbThreads; k++) { R[k]=0.0; }
 
-    auto MyAlgo000=[h,sizeBlock,&R](const int& k) {  
-            int vkBegin=k*sizeBlock;
-            int vkEnd=(k+1)*sizeBlock;
-            double sum=0.0; double x;
-            for(int j=vkBegin;j<vkEnd;j++)
-            {
-                x=h*double(j);
-                sum+=4.0/(1.0+x*x);
-            }
-            R[k]=sum;      
-            std::cout<<"Sum "<<R[k]<<"\n";
-        return true;
-    };
-   
-    TasksDispach FgCalculIntegral; 
-    std::cout<<"PI method Specx"<<"\n";
-    FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); //FgCalculIntegral.QSlipt=true;
-    FgCalculIntegral.sub_run_specx_R(MyAlgo000);
-    std::cout << "Vec R= "; 
-    for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << R[k] << " "; integralValue=integralValue+R[k]; }
-    Color(7);
-    std::cout << "\n"; 
-    integralValue=h*integralValue; 
-    std::cout<<"PI Value= "<<integralValue<<"\n";
-}
 
 
 void activeBlockTest002()
@@ -771,7 +763,7 @@ void activeBlockTest002()
     std::cout << "\n"; 
     std::cout<<"Calcul with Specx"<<"\n";
     VecR.clear();
-    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachSum"); //FgCalcul.QSave=false;
+    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachSum"); //FgCalcul.qSave=false;
     FgCalcul.run(MyAlgo000);
     std::cout << "Vec A= "; 
     for (auto it = VecA.begin(); it != VecA.end(); it++) { std::cout << *it << " "; }
@@ -862,7 +854,7 @@ void activeBlock001()
     std::cout<<"wValueOut="<<wValueOut<< std::endl;
     auto start_time= std::chrono::steady_clock::now();
     TasksDispach Fg1; 
-    Fg1.init(1,12,true); Fg1.setFileName("TestDispachAsync"); //Fg1.QDeferred=true;
+    Fg1.init(1,12,true); Fg1.setFileName("TestDispachAsync"); //Fg1.qDeferred=true;
     Fg1.sub_run_async(MyAlgo000);
     auto stop_time= std::chrono::steady_clock::now();
     auto run_time=std::chrono::duration_cast<std::chrono::microseconds> (stop_time-start_time);
@@ -913,7 +905,7 @@ void activeBlock001()
     start_time= std::chrono::steady_clock::now();
     TasksDispach Fg5; 
     Fg5.init(3,12,true); Fg5.setFileName("TestDispachSpecxW"); 
-    Fg5.QSlipt=true;
+    Fg5.qSlipt=true;
     Fg5.sub_run_specx_W(MyAlgo005);
     //Fg5.run(MyAlgo005);
     stop_time= std::chrono::steady_clock::now();
@@ -1151,8 +1143,7 @@ void RunTaskLoopInSpecifiedCPU(int NbLoop)
               pthread_exit(NULL);
           });
 
-        // Create a cpu_set_t object representing a set of CPUs. Clear it and mark
-        // only CPU i as set.
+        // Create a cpu_set_t object representing a set of CPUs. Clear it and mark only CPU i as set.
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
         CPU_SET(i, &cpuset);
@@ -1178,16 +1169,108 @@ void activeBlock007()
     std::cout << "\n"<< "\n"; 
 }
 
+
+
+void activeBlockTest001B()
+{
+    int nbThreads = 96;
+    double integralValue=0.0;
+    double R[nbThreads];
+    for (int k=0; k<nbThreads; k++) { R[k]=0.0; }
+
+    auto MyAlgo000=[&R](const int& k) mutable {  
+            double sum=0.0; double x;
+            for(int j=0;j<10;j++)
+            { 
+                sum+=double(j);
+            }
+            usleep(100);
+            R[k]=sum+double(k);      
+            //std::cout<<"Sum "<<R[k]<<"\n";
+        return true;
+    };
+   
+    TasksDispach Fg; 
+    Fg.setFileName("TestDispachIntegral"); 
+    Fg.init(1,nbThreads,true);  Fg.qInfo=false;
+    Fg.run(MyAlgo000);
+    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << R[k] << " ";  } 
+    std::cout << "\n"; 
+
+    for (int k=0; k<nbThreads; k++) { R[k]=0.0; }
+    Fg.init(2,nbThreads,true); Fg.qInfo=false;
+    Fg.run(MyAlgo000);
+
+    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << R[k] << " ";  } 
+    Color(7);
+    std::cout << "\n"; 
+}
+
+void activeBlockTestSpecxVector1(int time_sleep)
+{
+    int nbThreads = 96;
+    std::vector<double> valuesVec(nbThreads,0.0);
+    auto MyAlgo000=[time_sleep](const int i,double& s) {  
+            double sum=0.0; 
+            for(int j=0;j<10;j++)
+            { 
+                sum+=double(j);
+            }
+            usleep(time_sleep);
+            s=sum+i;      
+        return true;
+    };
+
+    SpRuntime runtime(nbThreads);
+    for(int k1 = 0 ; k1 < nbThreads ; ++k1){
+        runtime.task(
+            SpRead(k1),
+            SpWrite(valuesVec.at(k1)),MyAlgo000);
+    }
+    runtime.waitAllTasks();
+    runtime.stopAllThreads();
+    runtime.generateDot("Test.dot", true);
+    runtime.generateTrace("Test.svg");   
+    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
+    std::cout << "\n"; 
+    std::cout << "\n"; 
+}
+
+void activeBlockTestSpecxVector2(int time_sleep)
+{
+    int nbThreads = 96;
+    auto MyAlgo000=[time_sleep](const int i,double& s) {  
+            double sum=0.0; 
+            for(int j=0;j<10;j++)
+            { 
+                sum+=double(j);
+            }
+            usleep(time_sleep);
+            s=sum+i;      
+        return true;
+    };
+
+    TasksDispach Fg; 
+    Fg.setFileName("Test"); 
+    Fg.init(1,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true;
+    std::vector<double> valuesVec=Fg.sub_run_specx(MyAlgo000);
+    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
+    std::cout << "\n"; 
+    std::cout << "\n"; 
+}
+
+
+
 int main(int argc, const char** argv) {
 
-  bool QPlayNext=true;
-  QPlayNext=false;
+  bool qPlayNext=true;
+  qPlayNext=false;
   //std::cout << std::endl;
   //std::cout << "<<< Block000 >>>" << std::endl;
   //activeBlock000();
   //std::cout << std::endl;
 
-  if (QPlayNext) {
+  if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Block001 >>>" << std::endl;
     activeBlock001();
@@ -1199,11 +1282,11 @@ int main(int argc, const char** argv) {
     std::cout << std::endl;
   }
 
-  QPlayNext=true;
-  QPlayNext=false;
+  qPlayNext=true;
+  qPlayNext=false;
 
   // BEGIN::TEST BENCHMARKS
-  if (QPlayNext) {
+  if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< ====================================== >>>" << std::endl;
     std::cout << "<<< Test calcul intergral  >>>" << std::endl;
@@ -1224,10 +1307,10 @@ int main(int argc, const char** argv) {
   }
   // BEGIN::END BENCHMARKS
 
-  QPlayNext=true;
-  QPlayNext=false;
+  qPlayNext=true;
+  qPlayNext=false;
 
-  if (QPlayNext) {
+  if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Block003: Detached Future >>>" << std::endl;
     activeBlock003();
@@ -1244,10 +1327,10 @@ int main(int argc, const char** argv) {
     std::cout << std::endl;
   }
 
-  QPlayNext=true;
-  //QPlayNext=false;
+  qPlayNext=true;
+  qPlayNext=false;
 
-if (QPlayNext) {
+if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Block006: NAP  >>>" << std::endl;
     activeBlock006();
@@ -1255,10 +1338,10 @@ if (QPlayNext) {
 }
 
 
-  QPlayNext=true;
-  QPlayNext=false;
+  qPlayNext=true;
+  qPlayNext=false;
 
-if (QPlayNext) {
+if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Block007: Test Multithread Affinity  >>>" << std::endl;
     activeBlock007();
@@ -1266,7 +1349,33 @@ if (QPlayNext) {
 }
 
 
+  qPlayNext=true;
+  qPlayNext=false;
+
+if (qPlayNext) {
+    std::cout << std::endl;
+    std::cout << "<<< Block008  >>>" << std::endl;
+    //activeBlock008();
+    std::cout << std::endl;
+}
+
+
+  qPlayNext=true;
+  //qPlayNext=false;
+
+if (qPlayNext) {
+    std::cout << std::endl;
+    std::cout << "<<< Test Vector with specx  >>>" << std::endl;
+    //activeBlockTestSpecxVector1(10000);
+    activeBlockTestSpecxVector2(10000);
+    std::cout << std::endl;
+}
+
+
 //activeBlockTest001B();
+
+
+
 
 
   std::cout << "<<< The End >>>" << std::endl << std::endl;
