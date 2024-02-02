@@ -382,15 +382,16 @@ Function TasksDispach::sub_run_specx_W(Function myFunc)
 template<class Function>
 std::vector<double> TasksDispach::sub_run_specx(Function myFunc)
 {
+        std::vector<double> valuesVec(nbTh,0); 
         SpRuntime runtime(nbTh);  
         auto begin = std::chrono::steady_clock::now();
         nbTh= runtime.getNbThreads();
-        std::vector<double> valuesVec(nbTh,0); //trick to launch everything at once
         for(int k= 0; k < nbTh; ++k)
         { 
             auto const& idk = k;
             if (qInfo) { std::cout<<"Call num Thread Write Specx="<<idk<<"\n"; }
             runtime.task(SpRead(idk),SpWrite(valuesVec.at(idk)),myFunc).setTaskName("Op("+std::to_string(idk)+")");
+            usleep(0); std::atomic_int counter(0);
         }
         runtime.waitAllTasks();
         runtime.stopAllThreads();
@@ -690,26 +691,59 @@ void activeBlockTest001()
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
     FgCalculIntegral.init(1,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); FgCalculIntegral.qViewChrono=true;
     FgCalculIntegral.run(MyAlgo000);
-    //std::cout << "Vec R= "; 
-    //for (int k=0; k<valuesVec.size(); k++) { Color(k+1); std::cout << valuesVec[k] << " "; }
     Color(7);
 
     std::cout << "\n"; 
     integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
     std::cout<<"PI Value= "<<integralValue<<"\n";
 
-
+    /*
     std::cout<<"PI method Specx"<<"\n";
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
     FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); FgCalculIntegral.qViewChrono=true;
     FgCalculIntegral.run(MyAlgo000);
-    //std::cout << "Vec R= "; 
-    //for (int k=0; k<valuesVec.size(); k++) { Color(k+1); std::cout << valuesVec[k] << " "; }
     Color(7);
     std::cout << "\n"; 
     integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
     std::cout<<"PI Value= "<<integralValue<<"\n";
+    */
 }
+
+
+void activeBlockTest001_Beta(int nbThreads)
+{
+    long int nbN=1000000;
+    int sizeBlock=nbN/nbThreads;
+    int diffBlock=nbN-sizeBlock*nbThreads;
+    double h=1.0/double(nbN);
+    double integralValue=0.0;
+
+    auto MyAlgo000=[h,sizeBlock](const int k,double& s) {  
+            int vkBegin=k*sizeBlock;
+            int vkEnd=(k+1)*sizeBlock;
+            double sum=0.0; double x=0.0;
+            for(int j=vkBegin;j<vkEnd;j++) { x=h*double(j); sum+=4.0/(1.0+x*x); }
+            s=sum;
+            //std::cout <<s<< "\n"; 
+        return true;
+    };
+
+    std::cout<<"\n";
+    std::cout<<"PI method Specx"<<"\n";
+    TasksDispach Fg; 
+    Fg.setFileName("Test with Specx"); 
+    Fg.init(2,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true; Fg.qSave=true; Fg.setFileName("TestDispachIntegral");
+    std::vector<double> valuesVec=Fg.sub_run_specx(MyAlgo000);
+    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
+    std::cout << "\n"; 
+    Color(7);
+    std::cout << "\n"; 
+    integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
+    std::cout<<"PI Value= "<<integralValue<<"\n";
+
+    std::cout << "\n"; 
+}
+
 
 
 
@@ -1000,95 +1034,6 @@ void activeBlock005()
 }
 
 
-/**NAP */
-
-constexpr auto& _elt1 = NA::identifier<struct elt1_tag>;
-constexpr auto& _elt2 = NA::identifier<struct elt2_tag>;
-constexpr auto& _elt3 = NA::identifier<struct elt3_tag>;
-constexpr auto& _elt4 = NA::identifier<struct elt4_tag>;
-constexpr auto& _elt5 = NA::identifier<struct elt5_tag>;
-
-template <typename ... Ts>
-void func( Ts && ... v )
-{
-    auto args = NA::make_arguments( std::forward<Ts>(v)... );
-
-    std::cout << "elt1 : " << args.get(_elt1) << "\n"
-              << "elt2 : " << args.get_else(_elt2, "a default value" ) << "\n"
-              << "elt4 : " << args.get_else(_elt4, "a default value" ) << "\n"
-              << "elt3 : " << args.get_else_invocable(_elt3, []() {   std::cout<<"HELLO"<< '\n';  return 3.1415; } )
-              << std::endl;
-
-    
-    double n=1.3;
-    n=n+args.get_else(_elt4, "a default value" );
-    std::cout << "v = " << n << "\n";
-
-    int initVal=0;
-    SpRuntime runtime(6);
-     auto task1 =runtime.task(SpRead(initVal),
-            [](const int&){
-                usleep(1000);
-            }
-            );
-
-    runtime.waitAllTasks();
-    runtime.stopAllThreads();
-}
-
-/**NAP 2*/
-using element1 = NA::named_argument_t<struct element1_tag>;
-using element2 = NA::named_argument_t<struct element2_tag>;
-constexpr auto& _element1 = NA::identifier<element1>;
-constexpr auto& _element2 = NA::identifier<element2>;
-constexpr auto& _element3 = NA::identifier<struct element3_tag>;
-constexpr auto& _element4 = NA::identifier<struct element4_tag>;
-
-template <typename ... TT>
-constexpr auto test1( NA::arguments<TT...> && v )
-{
-    auto && e1 = v.template get<element1>();
-    auto && e2 = v.template get_else<element2>( 4 );
-    auto && e3 = v.get(_element3);
-    auto && e4 = v.get_else( _element4, 7 );
-
-    std::cout << "e1=" << e1 << "\n";
-    std::cout << "e2=" << e2 << "\n";
-    std::cout << "e3=" << e3 << "\n";
-    std::cout << "e4=" << e4 << "\n";
-
-    return e1+e2+e3+e4;
-}
-
-template <typename ... Ts>
-constexpr auto test1( Ts && ... v )
-{
-    return test1( NA::make_arguments( std::forward<Ts>(v)... ) );
-}
-
-
-void activeBlock006()
-{
-    func( _elt2=36,_elt1="toto",_elt4=0.5,_elt3=std::string("string as rvalue") );
-    std::cout << std::endl;
-    func( _elt2=36,_elt1="toto",_elt4=0.5);
-    std::cout << std::endl;
-    //float val=10.123;
-    //func( _elt2=val,_elt4=0.5);
-
-    //int x = 200;
-    //float y = 200.790;
-    //std::cout << typeid(x).name() << std::endl;
-    //std::cout << typeid(y).name() << std::endl;
-    //std::cout << typeid(x * y).name() << std::endl;
-    int a=1;
-    auto value=test1( _element1=a,_element2=2,_element3=3,_element4=4);
-    
-    std::cout <<value<< std::endl;
-    std::cout << std::endl;
-    
-}
-
 //TEST THREAD WITH FIXED CPU
 
 void *WorkerCPU_Beta(void *param) {
@@ -1329,6 +1274,7 @@ int main(int argc, const char** argv) {
     std::cout << "<<< ====================================== >>>" << std::endl;
     std::cout << "<<< Test calcul intergral  >>>" << std::endl;
     activeBlockTest001();
+    activeBlockTest001_Beta(6);
     std::cout << std::endl;
 
     std::cout << std::endl;
@@ -1375,11 +1321,10 @@ int main(int argc, const char** argv) {
 if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Block006: NAP  >>>" << std::endl;
-    activeBlock006();
+    //activeBlock006();
     std::cout << std::endl;
 }
 // END::TEST NAP
-
 
   qPlayNext=true;
   qPlayNext=false;
