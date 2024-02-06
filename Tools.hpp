@@ -138,3 +138,61 @@ void CONSOLE_Color(int n)
 
 
 /*=====================================================================================================*/
+
+
+template <typename T>
+std::string GetCallTyp(T& fcv)
+{
+    //return std::is_const_v<T>;
+    //if constexpr ( T::AccessMode == SpDataAccessMode::READ )
+    //{
+    //}
+
+
+    std::string rep="Unknow";
+    std::string s1=typeid(fcv).name();
+    bool qconst=std::is_const_v<T>;
+    bool qclass=std::is_class_v<T>;
+    bool qfunction=std::is_function_v<T>;
+    bool qpointer=std::is_pointer_v<T>;
+    bool qarray=std::is_array_v<T>;
+    bool qenum=std::is_enum_v<T>;
+    bool qunion=std::is_union_v<T>;
+    bool qvoid=std::is_void_v<T>;
+
+    std::cout << "type : " << s1 <<'\n';
+    std::cout << "void : " << qvoid <<" ";  
+    std::cout << "enum : " << qenum <<" ";
+    std::cout << "union : " << qunion <<" "; 
+    std::cout << "const : " << qconst <<" ";
+
+    std::cout << "array : " << qarray <<" ";
+    std::cout << "pointer : " << qpointer <<" ";
+    std::cout << "function : " << qfunction <<" ";
+    std::cout << "class : " << qclass << '\n';
+
+    int l=s1.length();
+    if (l>1) {
+        if (s1.find("16SpScalarDataModeIL16SpDataAccessMode1") != std::string::npos) { rep="SpWrite"; }
+        if (s1.find("16SpScalarDataModeIL16SpDataAccessMode0") != std::string::npos) { rep="SpRead"; }
+        if (s1.find("16SpScalarDataModeIL16SpDataAccessMode3") != std::string::npos) { rep="SpCommutativeWrite"; }
+        if (s1.find("vector") != std::string::npos) { 
+            if (qconst) { rep="Const Vector"; } else { rep="Vector"; }
+        }
+    }
+    else 
+    {
+        if (s1.find("i")!= std::string::npos) { 
+            if (qconst) { rep="Const Integer"; } else { rep="Integer"; }
+        }
+        if (s1.find("f")!= std::string::npos) { 
+            if (qconst) { rep="Const Float"; } else { rep="Float"; }
+        }
+        if (s1.find("d")!= std::string::npos) { 
+            if (qconst) { rep="Const Double"; } else { rep="Double "; }
+         }
+    }
+    return (rep);
+}
+
+/*=====================================================================================================*/

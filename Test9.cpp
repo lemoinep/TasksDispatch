@@ -473,25 +473,6 @@ void activeBlock001()
     std::cout<<"DeltaTime="<<run_time.count()<< std::endl;
     std::cout<<"wValueOut="<<wValueOut<< std::endl<<std::endl;
 
-  
-    auto MyAlgo005=[&](int& v) {  
-        //std::cout<<"wValue k="<<k<< std::endl;
-        wValueOut++; 
-        usleep(1000);
-    return true;};
-
-    std::cout<<"wValueOut="<<wValueOut<< std::endl;
-    start_time= std::chrono::steady_clock::now();
-    TasksDispach Fg5; 
-    Fg5.init(3,12,true); Fg5.setFileName("TestDispachSpecxW"); 
-    Fg5.qSlipt=true;
-    Fg5.sub_run_specx_W(MyAlgo005);
-    //Fg5.run(MyAlgo005);
-    stop_time= std::chrono::steady_clock::now();
-    run_time=std::chrono::duration_cast<std::chrono::microseconds> (stop_time-start_time);
-    std::cout<<"DeltaTime="<<run_time.count()<< std::endl;
-    std::cout<<"wValueOut="<<wValueOut<< std::endl<<std::endl;
-
     std::cout <<"END:MyEachThread1\n\n";
 }
 
@@ -533,22 +514,16 @@ void activeBlock002()
 
 void activeBlock004()
 {
-    std::cout <<"Test detach 2"<<std::endl;
-    // future from a packaged_task
-    std::packaged_task<int()> task([]{ return 7; }); // wrap the function
-
+    std::cout <<"Test detach"<<std::endl;
+    std::packaged_task<int()> task([]{ return 7; }); 
     std::future<int> f1 = task.get_future(); 
-
     std::thread t(std::move(task)); // launch on a thread
- 
     // future from an async()
     std::future<int> f2 = std::async(std::launch::async, []{ return 8; });
- 
     // future from a promise
     std::promise<int> p;
     std::future<int> f3 = p.get_future();
     std::thread([&p]{ p.set_value_at_thread_exit(9); }).detach();
- 
     std::cout << "Waiting..." << std::flush;
     f1.wait();
     f2.wait();
@@ -561,7 +536,7 @@ void activeBlock004()
 
 void activeBlock005()
 {
-    std::cout <<"Test detach 3"<<std::endl;
+    std::cout <<"Test detach 2 with TasksDispach"<<std::endl;
     auto MyAlgoDetach1 = []{ std::cout <<"I live 1!"<<std::endl; sleep(1);  std::cout <<"YES 1!"<<std::endl;  return 123;};
     auto MyAlgoDetach2 = []{ std::cout <<"I live 2!"<<std::endl; sleep(10); std::cout <<"YES 2!"<<std::endl;  return 123;};
     auto MyAlgoDetach3 = []{ std::cout <<"I live 3!"<<std::endl; sleep(2);  std::cout <<"YES 3!"<<std::endl;  return 123;};

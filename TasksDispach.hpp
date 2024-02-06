@@ -53,6 +53,8 @@ class TasksDispach
         int getNbMaxThread();
         void init(int numType,int nbThread,bool qsaveInfo);
         void setFileName(std::string s);
+
+        //BEGIN::multithread specx part
         template<class Function>
             Function run(Function myFunc);
                 template<class Function>
@@ -60,14 +62,13 @@ class TasksDispach
                 template<class Function>
                     Function sub_run_async(Function myFunc);
                 template<class Function>
-                    Function sub_run_specx_W(Function myFunc);
-                template<class Function>
                     Function sub_run_specx_R(Function myFunc);
 
                 template<class Function> 
                     std::vector<double> sub_run_specx(Function myFunc);
                 template<class Function>
                     std::vector<double> sub_run_async_beta(Function myFunc);
+        //END::multithread specx part
 
         //BEGIN::Detach part
         template<typename FctDetach>
@@ -76,10 +77,11 @@ class TasksDispach
                     auto sub_detach_future_beta(FctDetach&& func) -> std::future<decltype(func())>;
         template <typename result_type, typename FctDetach>
                     std::future<result_type> sub_detach_future_gamma(FctDetach func);
+
+        template<class FunctionLambda,class FunctionLambdaDetach>
+                    void sub_detach_specx_beta(FunctionLambda myFunc,int nbThreadsA,FunctionLambdaDetach myFuncDetach,int nbThreadsD);
         //END::Detach part
 
-        template<class ArgR,class ArgW,class Function>
-            Function sub_run_specx_RW(ArgR myArgR,ArgW myArgW,Function myFunc);
 
         template<class InputIterator, class Function>
             Function for_each(InputIterator first, InputIterator last,Function myFunc);
@@ -185,6 +187,39 @@ template <typename result_type, typename FctDetach>
     return fut;
 }
 
+template<class FunctionLambda,class FunctionLambdaDetach>
+void TasksDispach::sub_detach_specx_beta(FunctionLambda myFunc,int nbThreadsA,FunctionLambdaDetach myFuncDetach,int nbThreadsD)
+{ 
+    if (qInfo) { std::cout<<"Call Specx Detach="<<"\n"; }
+    SpRuntime runtimeA(nbThreadsA);
+    SpRuntime runtimeD(nbThreadsD);
+    int fakeData=1;
+    runtimeA.task(SpWrite(fakeData),
+        [&,&runtimeD](int & depFakeData)
+        {
+            runtimeD.task([&,&depFakeData]()
+            {
+                myFuncDetach();
+            });
+            myFunc();
+        });
+    runtimeA.waitAllTasks();
+    runtimeA.stopAllThreads();
+    if (qSave)
+    {
+        runtimeA.generateDot("DetachA.dot", true);
+        runtimeA.generateTrace("DetachA.svg");   
+    }
+    runtimeD.waitAllTasks();
+    runtimeD.stopAllThreads();
+    if (qSave)
+    {
+        runtimeD.generateDot("DetachD.dot", true);
+        runtimeD.generateTrace("DetachD.svg");   
+    }
+    if (qInfo) { std::cout << std::endl; }
+} 
+
 
 template<class InputIterator, class Function>
 Function TasksDispach::for_each(InputIterator first, InputIterator last,Function myFunc)
@@ -285,41 +320,7 @@ std::vector<double> TasksDispach::sub_run_async_beta(Function myFunc)
     return valuesVec;
 }
 
-template<class Function>
-Function TasksDispach::sub_run_specx_W(Function myFunc)
-{
-        SpRuntime runtime(nbTh);  
-        auto begin = std::chrono::steady_clock::now();
-        nbTh= runtime.getNbThreads();
-        int iValue=0;
-        std::vector<int> valuesVec(nbTh,0); //trick to launch everything at once
 
-        for(int k= 0; k < nbTh; ++k)
-        { 
-            auto const& idk = k;
-            if (qInfo) { std::cout<<"Call num Thread Write Specx="<<idk<<"\n"; }
-                if (qSlipt) {
-                    runtime.task(SpWrite(iValue),myFunc).setTaskName("Op("+std::to_string(idk)+")");
-                }
-                else
-                {
-                    runtime.task(SpWrite(valuesVec.at(idk)),myFunc).setTaskName("Op("+std::to_string(idk)+")");
-                }
-            //usleep(1);
-            //std::atomic_int counter(0);
-        }
-        runtime.waitAllTasks();
-        runtime.stopAllThreads();
-        auto end = std::chrono::steady_clock::now();
-        if (qSave)
-        {
-            runtime.generateDot(FileName+".dot", true);
-            runtime.generateTrace(FileName+".svg");   
-        }
-        if (qInfo) { std::cout<<"\n"; }
-        if (qViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n";std::cout<<"\n"; }
-    return myFunc;
-}
 
 
 template<class Function>
@@ -364,8 +365,7 @@ Function TasksDispach::sub_run_specx_R(Function myFunc)
             auto const& idk = k;
             if (qInfo) { std::cout<<"Call num Thread Read Specx="<<idk<<"\n"; }
             runtime.task(SpRead(idk),myFunc).setTaskName("Op("+std::to_string(idk)+")");
-            usleep(0);
-            std::atomic_int counter(0);
+            usleep(0); std::atomic_int counter(0);
         }
         runtime.waitAllTasks();
         runtime.stopAllThreads();
@@ -384,37 +384,6 @@ Function TasksDispach::sub_run_specx_R(Function myFunc)
 
 
 
-template<class ArgR,class ArgW,class Function>
-Function TasksDispach::sub_run_specx_RW(ArgR myArgR,ArgW myArgW,Function myFunc)
-{
-        auto begin = std::chrono::steady_clock::now();
-        SpRuntime runtime(nbTh);  
-        nbTh= runtime.getNbThreads();
-        int iValue=0;
-        for(int k= 0; k < nbTh; ++k)
-        { 
-            if (qInfo) { std::cout<<"Call num Thread Read Specx="<<k<<"\n"; }
-            runtime.task(SpRead(myArgR),SpWrite(myArgW),myFunc).setTaskName("Op("+std::to_string(k)+")");
-            //usleep(1);
-            std::atomic_int counter(0);
-        }
-        runtime.waitAllTasks();
-        runtime.stopAllThreads();
-        auto end = std::chrono::steady_clock::now(); 
-        if (qSave)
-        {
-            runtime.generateDot(FileName+".dot", true);
-            runtime.generateTrace(FileName+".svg");   
-        }
-              
-        if (qInfo) { std::cout<<"\n"; }
-        if (qViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
-    return myFunc;
-}
-
-
-
-
 template<class Function>
 Function TasksDispach::run(Function myFunc)
 {
@@ -422,8 +391,6 @@ Function TasksDispach::run(Function myFunc)
     case 1: return(sub_run_async(myFunc));
     break;
     case 2: return(sub_run_specx_R(myFunc));
-    break;
-    case 3: return(sub_run_specx_W(myFunc));
     break;
     default:
         return(sub_run_multithread(myFunc));
