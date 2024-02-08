@@ -29,107 +29,9 @@
 #include "Utils/SpConsumerThread.hpp"
 
 
-#include "napp.hpp"
-
 
 //=======================================================================================================================
-
-
-constexpr auto& _parameters = NA::identifier<struct parameters_tag>;
-constexpr auto& _task = NA::identifier<struct task_tag>;
-
-// namespace na {
-// using parameters = typename std::decay_t<decltype(_parameters)>::identifier_type;
-// using task = typename std::decay_t<decltype(_task)>::identifier_type;
-// }
-
-namespace Backend{
-
-template<typename ...T, size_t... I>
-auto extractParametersAsTuple( std::tuple<T...> && t, std::index_sequence<I...>)
-{
-    return std::forward_as_tuple( std::get<I>(t).getValue()...);
-}
-
-struct Runtime{
-    template <typename ... Ts>
-    void task(Ts && ... ts ) {
-        auto t = std::make_tuple( std::forward<Ts>(ts)... );
-        auto callback = std::get<sizeof...(Ts) - 1>(t);
-        auto parameters = extractParametersAsTuple( std::move(t), std::make_index_sequence<sizeof...(Ts)-1>{} );
-        std::apply( callback, std::move(parameters) );
-    }
-};
-
-template <typename T,bool b>
-class SpData
-{
-    static_assert(std::is_reference<T>::value,
-                  "The given type must be a reference");
-public:
-    using value_type = T;
-    static constexpr bool isWrite = b;
-
-    template <typename U, typename = std::enable_if_t<std::is_convertible_v<U,T>> >
-    constexpr explicit SpData( U && u ) : M_val( std::forward<U>(u) ) {}
-
-    constexpr value_type getValue() { return M_val; }
-private:
-    value_type M_val;
-};
-
-template <typename T>
-auto spRead( T && t )
-{
-    return SpData<T,false>{ std::forward<T>( t ) };
-}
-template <typename T>
-auto spWrite( T && t )
-{
-    return SpData<T,true>{ std::forward<T>( t ) };
-}
-
-template<typename T>
-auto toSpData( T && t )
-{
-    if constexpr ( std::is_const_v<std::remove_reference_t<T>> )
-        return spRead( std::forward<T>( t ) );
-    else
-        return spWrite( std::forward<T>( t ) );
-}
-
-template<typename ...T, size_t... I>
-auto makeSpDataHelper( std::tuple<T...>& t, std::index_sequence<I...>)
-{
-    return std::make_tuple( toSpData(std::get<I>(t))...);
-}
-template<typename ...T>
-auto makeSpData( std::tuple<T...>& t ){
-    return makeSpDataHelper<T...>(t, std::make_index_sequence<sizeof...(T)>{});
-}
-}
-
-namespace Frontend
-{
-template <typename ... Ts>
-void
-runTask( Ts && ... ts )
-{
-    auto args = NA::make_arguments( std::forward<Ts>(ts)... );
-    auto && task = args.get(_task);
-    auto && parameters = args.get_else(_parameters,std::make_tuple());
-
-    Backend::Runtime runtime;
-    std::apply( [&runtime](auto... args){ runtime.task(args...); }, std::tuple_cat( Backend::makeSpData( parameters ), std::make_tuple( task ) ) );
-}
-
-template <typename ... Ts>
-auto parameters(Ts && ... ts)
-{
-    return std::forward_as_tuple( std::forward<Ts>(ts)... );
-}
-}
-
+//...
 //=======================================================================================================================
 
 
@@ -198,6 +100,8 @@ class TasksDispach
         //BEGIN::Thread affinity part
         template<class Function>
             void RunTaskInNumCPU(int idCPU,Function myFunc);
+        template<class Function>
+            void RunTaskInNumCPUs(std::vector<int> NumCPU ,Function myFunc);
         //END::Thread affinity part
 
         template<class InputIterator, class Function>
@@ -285,6 +189,34 @@ void TasksDispach::RunTaskInNumCPU(int idCPU,Function myFunc)
   pthread_join(thread, NULL);
   //pthread_detach(thread);
   pthread_attr_destroy(&pta);
+}
+
+template<class Function>
+void TasksDispach::RunTaskInNumCPUs(std::vector<int> NumCPU ,Function myFunc)
+{
+  int nbTh=NumCPU.size;
+  std::function<void()> func =myFunc;
+  pthread_t *thread_array;
+  thread_array = malloc(nbTh * sizeof(pthread_t));
+  pthread_attr_t *pta_array;
+  pta_array = malloc(nbTh * sizeof(pthread_attr_t));
+
+  for (int i = 0; i < nbTh; i++) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(NumCPU[i], &cpuset);
+    std::cout<<"Num CPU="<< i <<" activated"<<std::endl;
+    pthread_attr_init(&pta_array[i]);
+    pthread_attr_setaffinity_np(&pta_array[i], sizeof(cpuset), &cpuset);
+    if (pthread_create(&thread_array[i],&pta_array[i],WorkerInNumCPU,&func)) { std::cerr << "Error in creating thread" << std::endl; }
+  }
+
+  for (int i = 0; i < nbTh; i++) {
+        pthread_join(thread_array[i], NULL);
+        pthread_attr_destroy(&pta_array[i]);
+  }
+  free(thread_array); 
+  free(pta_array); 
 }
 
 
