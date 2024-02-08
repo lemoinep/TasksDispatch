@@ -552,6 +552,39 @@ void activeBlock005()
     t1.get(); t2.get(); myfutureFg3.get();
 }
 
+void activeBlock006()
+{
+    int value=123456;
+    std::cout<<"Value before="<<value<< std::endl;
+    auto Md=[&]() {  
+        auto begin = std::chrono::steady_clock::now();
+        std::cout << "   I live detach! ..." << std::endl;
+        sleep(9);
+        value++;
+        std::cout << "   YES form detach!." << std::endl;
+        auto end = std::chrono::steady_clock::now();
+        std::cout << "   ===> dt 2: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n";std::cout<<"\n"; 
+    return true;};
+
+    auto fA=[&]() {  
+        auto begin = std::chrono::steady_clock::now();
+        std::cout << " I live 4!" << std::endl;
+        sleep(2);
+        std::cout << " YES 4!" << std::endl;
+        auto end = std::chrono::steady_clock::now();
+        std::cout << " ===> dt 1: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n";std::cout<<"\n"; 
+        value++;
+    return true;};
+
+    auto begin3 = std::chrono::steady_clock::now();
+    TasksDispach Fg; 
+    Fg.sub_detach_specx_beta(fA,1,Md,1);
+    auto end3 = std::chrono::steady_clock::now();
+    std::cout << "===> dt 3: "<< std::chrono::duration_cast<std::chrono::microseconds>(end3 - begin3).count()<< " us\n";std::cout<<"\n"; 
+
+    std::cout<<"Value after="<<value<< std::endl;
+}
+
 
 //TEST THREAD WITH FIXED CPU
 
@@ -633,6 +666,7 @@ void activeBlock007()
     RunTaskLoopInSpecifiedCPU(1);
     std::cout << "\n"<< "\n";
     RunTaskInNumCPU_Beta(2);
+    //std::cout << "\n"<< "\n"; 
     std::cout << "\n"<< "\n"; 
 }
 
@@ -704,31 +738,12 @@ void activeBlockTestSpecxVector1(int time_sleep)
     std::cout << "\n"; 
 }
 
-void activeBlockTestSpecxVector2(int time_sleep)
-{
-    int nbThreads = 96;
-    auto MyAlgo000=[time_sleep](const int i,double& s) {  
-            double sum=0.0; 
-            for(int j=0;j<100;j++)
-            { 
-                sum+=double(j);
-            }
-            usleep(time_sleep);
-            s=sum+i;      
-        return true;
-    };
 
-    TasksDispach Fg; 
-    Fg.setFileName("Test"); 
-    Fg.init(1,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true; Fg.qSave=true;
-    std::vector<double> valuesVec=Fg.sub_run_specx(MyAlgo000);
-    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
-    std::cout << "\n"; 
-    Color(7);
-    std::cout << "\n"; 
-}
 
-void activeBlockTestSpecxVector3(int time_sleep)
+//===============================================================================================================
+// BEGIN::TEST VECTOR PERF
+
+void activeBlockTestVector1(int time_sleep)
 {
     int nbThreads = 96;
     double integralValue=0.0;
@@ -746,7 +761,7 @@ void activeBlockTestSpecxVector3(int time_sleep)
         return true;
     };
    
-    std::cout<<"With std:async"<< "\n";
+    std::cout<<"With std:async level 1"<< "\n";
     TasksDispach Fg; 
     Fg.setFileName("Test"); 
     Fg.init(1,nbThreads,true);  Fg.qInfo=false;  Fg.qViewChrono=true;
@@ -755,7 +770,7 @@ void activeBlockTestSpecxVector3(int time_sleep)
     std::cout << "\n"; 
     Color(7);
     std::cout << "\n"; 
-    std::cout<<"With std:thread"<< "\n";
+    std::cout<<"With std:thread level 1"<< "\n";
     Fg.sub_run_multithread(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << R[k] << " ";  } 
     std::cout << "\n"; 
@@ -763,9 +778,56 @@ void activeBlockTestSpecxVector3(int time_sleep)
     std::cout << "\n"; 
 }
 
+void activeBlockTestVector2(int time_sleep)
+{
+    int nbThreads = 96;
+    auto MyAlgo000=[time_sleep](const int i,double& s) {  
+            double sum=0.0; 
+            for(int j=0;j<100;j++)
+            { 
+                sum+=double(j);
+            }
+            usleep(time_sleep);
+            s=sum+i;      
+        return true;
+    };
+
+    TasksDispach Fg; 
+    std::vector<double> valuesVec;
+
+    std::cout<<"With multithread level 2"<< "\n";
+    Fg.setFileName("With std:async level 2 "); 
+    Fg.init(1,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true; Fg.qSave=true;
+    valuesVec=Fg.sub_run_multithread_beta(MyAlgo000);
+    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
+    std::cout << "\n"; 
+    Color(7);
+    std::cout << "\n"; 
+
+    std::cout<<"With std:async level 2"<< "\n";
+    Fg.setFileName("With std:async level 2 "); 
+    Fg.init(1,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true; Fg.qSave=true;
+    valuesVec=Fg.sub_run_async_beta(MyAlgo000);
+    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
+    std::cout << "\n"; 
+    Color(7);
+    std::cout << "\n"; 
+
+    std::cout<<"With specx level 2"<< "\n";
+    Fg.init(2,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true; Fg.qSave=true;
+    valuesVec=Fg.sub_run_specx(MyAlgo000);
+    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
+    std::cout << "\n"; 
+    Color(7);
+    std::cout << "\n"; 
+}
+
+//===============================================================================================================
 
 
-void activeBlock008()
+
+
+void activeBlock008Alpha()
 {
     //TEST TG
     SpComputeEngine ce(SpWorkerTeamBuilder::TeamOfCpuWorkers());
@@ -791,11 +853,9 @@ void activeBlock008()
 void activeBlock008Beta()
 {
     //TEST TG-WITHOUT dependencies
-    
     SpComputeEngine ce(SpWorkerTeamBuilder::TeamOfCpuWorkers());
     SpTaskGraph<SpSpeculativeModel::SP_NO_SPEC> tg;
     //<SpSpeculativeModel::SP_MODEL_1>
-
     tg.computeOn(ce);
     int ValueR=123;
     int ValueW=0;
@@ -813,6 +873,39 @@ void activeBlock008Beta()
     std::cout << "ValueW out=" <<ValueW<< std::endl;
     std::cout << "\n"<< "\n"; 
     
+}
+
+
+
+void activeBlock0009()
+{
+    int val1=1; int nbThreads=6;
+    std::cout << "val1="<<val1<< std::endl;
+    auto FC1=[&]() {  
+        std::cout<<"Hello 1 back form CPU="<< sched_getcpu()<<std::endl;
+        val1++;
+        sleep(5);
+        return true;
+    };
+
+    auto FC2=[&]() {  
+        std::cout<<"Hello 2 back form CPU="<< sched_getcpu()<<std::endl;
+        val1++;
+        usleep(10);
+        return true;
+    };
+
+    TasksDispach Fg; 
+    Fg.init(0,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true; Fg.qSave=true;
+    Fg.RunTaskInNumCPU(2,FC1);
+    std::cout << "val1="<<val1<< std::endl;
+    std::cout << "\n"<< "\n";
+    Fg.RunTaskInNumCPU(3,FC2);
+    std::cout << "val1="<<val1<< std::endl;
+    std::cout << "\n"; 
+    Color(7);
+    std::cout << "\n"; 
+    sleep(10);
 }
 
 
@@ -838,7 +931,7 @@ int main(int argc, const char** argv) {
 // END::TESTS 
 
   qPlayNext=true;
-  //qPlayNext=false;
+  qPlayNext=false;
 
   // BEGIN::TEST BENCHMARKS
   if (qPlayNext) {
@@ -865,7 +958,7 @@ int main(int argc, const char** argv) {
   // END::TEST BENCHMARKS
 
   qPlayNext=true;
-  //qPlayNext=false;
+  qPlayNext=false;
 
  // BEGIN::TEST DETACH
   if (qPlayNext) {
@@ -875,24 +968,16 @@ int main(int argc, const char** argv) {
     std::cout << std::endl;
 
     std::cout << std::endl;
-    std::cout << "<<< Block005: Deferred >>>" << std::endl;
+    std::cout << "<<< Block005: Detach >>>" << std::endl;
     activeBlock005();
+    std::cout << std::endl;
+
+    std::cout << std::endl;
+    std::cout << "<<< Block006: Detach Specx  >>>" << std::endl;
+    activeBlock006();
     std::cout << std::endl;
   }
 // END::TEST DETACH
-
-
-  qPlayNext=true;
-  qPlayNext=false;
-
-// BEGIN::TEST NAP
-if (qPlayNext) {
-    std::cout << std::endl;
-    std::cout << "<<< Block006: NAP  >>>" << std::endl;
-    //activeBlock006();
-    std::cout << std::endl;
-}
-// END::TEST NAP
 
   qPlayNext=true;
   qPlayNext=false;
@@ -906,20 +991,16 @@ if (qPlayNext) {
 }
 // END::TEST MULTITHREAD AFFINITY
 
-
-
-
   qPlayNext=true;
-  //qPlayNext=false;
+  qPlayNext=false;
 
 // BEGIN::TEST VECTORS LIST THREAD
 if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Test Vector  >>>" << std::endl;
     //activeBlockTestSpecxVector1(10000);
-    activeBlockTestSpecxVector3(100000);
-    std::cout<<"With specx"<< "\n";
-    activeBlockTestSpecxVector2(100000);
+    activeBlockTestVector1(100000);
+    activeBlockTestVector2(100000);
     std::cout << std::endl;
 }
 // END::TEST VECTORS LIST THREAD
@@ -929,18 +1010,30 @@ if (qPlayNext) {
 
 
   qPlayNext=true;
-  //qPlayNext=false;
+  qPlayNext=false;
 
 // BEGIN::TEST TG FROM SPECX
 if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Test Tg from Specx  >>>" << std::endl;
-    activeBlock008();
+    activeBlock008Alpha();
     activeBlock008Beta();
     std::cout << std::endl;
 }
 // END::TEST TG FROM SPECX
 
+
+  qPlayNext=true;
+  //qPlayNext=false;
+
+// BEGIN::TEST THREAD AFFINITY PART
+if (qPlayNext) {
+    std::cout << std::endl;
+    std::cout << "<<< Thread affinity part  >>>" << std::endl;
+    activeBlock0009();
+    std::cout << std::endl;
+}
+// END::TEST THREAD AFFINITY PART
 
 
 

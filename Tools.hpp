@@ -196,3 +196,15 @@ std::string GetCallTyp(T& fcv)
 }
 
 /*=====================================================================================================*/
+
+auto GetListNameObjects(std::string ChName)
+{
+    std::ifstream FICH(ChName);
+    std::string lineA;
+    std::vector<std::string> ListObjects;
+    while (getline(FICH, lineA)) { ListObjects.push_back(lineA); } 
+    FICH.close();
+    return ListObjects;
+}
+
+/*=====================================================================================================*/
