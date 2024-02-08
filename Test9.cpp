@@ -601,12 +601,16 @@ void *WorkerCPU_Beta(void *param) {
 template<class Function>
 void RunTaskInNumCPUs(std::vector<int> NumCPU ,Function myFunc)
 {
-  int nbTh=NumCPU.size;
+  int nbTh=NumCPU.size();
   std::function<void()> func =myFunc;
-  pthread_t *thread_array;
-  thread_array = malloc(nbTh * sizeof(pthread_t));
-  pthread_attr_t *pta_array;
-  pta_array = malloc(nbTh * sizeof(pthread_attr_t));
+  //pthread_t *thread_array;
+  //thread_array = malloc(nbTh * sizeof(pthread_t));
+  //pthread_attr_t *pta_array;
+  //pta_array = malloc(nbTh * sizeof(pthread_attr_t));
+
+  //pthread_t *thread_array;
+  pthread_t thread_array[nbTh];
+  pthread_attr_t pta_array[nbTh];
 
   for (int i = 0; i < nbTh; i++) {
     cpu_set_t cpuset;
@@ -620,11 +624,14 @@ void RunTaskInNumCPUs(std::vector<int> NumCPU ,Function myFunc)
 
   for (int i = 0; i < nbTh; i++) {
         pthread_join(thread_array[i], NULL);
-        pthread_attr_destroy(&pta_array[i]);
-
   }
-  free(thread_array); 
-  free(pta_array); 
+
+  for (int i = 0; i < nbTh; i++) {
+        pthread_attr_destroy(&pta_array[i]);
+  }
+
+  //free(thread_array); 
+  //free(pta_array); 
   //pthread_detach(thread);
 }
 
@@ -938,6 +945,30 @@ void activeBlock0009()
     Color(7);
     std::cout << "\n"; 
     sleep(10);
+
+
+
+}
+
+
+void activeBlock0010()
+{   
+    int val1=0; 
+    std::vector<int> NumCPU={1,2,55,80};
+    std::cout << "List Num CPU="<<"\n";
+    for (int x : NumCPU) { std::cout << x << " "; }
+    std::cout << "\n"<< "\n"; 
+
+    auto FC1=[&]() {  
+        std::cout<<"Hello form CPU="<< sched_getcpu()<<std::endl;
+        val1++;
+        sleep(1);
+        return true;
+    };
+    TasksDispach Fg; 
+    //RunTaskInNumCPUs(NumCPU,FC1);
+    Fg.RunTaskInNumCPUs(NumCPU,FC1);
+    std::cout << "val1="<<val1<< std::endl;
 }
 
 
@@ -1062,7 +1093,8 @@ if (qPlayNext) {
 if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Thread affinity part  >>>" << std::endl;
-    activeBlock0009();
+    //activeBlock0009();
+    activeBlock0010();
     std::cout << std::endl;
 }
 // END::TEST THREAD AFFINITY PART
