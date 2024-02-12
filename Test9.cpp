@@ -976,15 +976,14 @@ int main(int argc, const char** argv) {
   qPlayNext=false;
 
 
-
+  std::cout << std::endl;
   testScanAllThreadMethods();
-
-  /*  
   std::cout << std::endl;
-  std::cout << "<<< Test Scan >>>" << std::endl;
-  activeBlockTestVector2(100000);
-  std::cout << std::endl;
-  */
+  
+  //std::cout << "<<< Test Scan >>>" << std::endl;
+  //activeBlockTestVector2(100000);
+  //std::cout << std::endl;
+  
 
 
 
