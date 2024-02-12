@@ -146,8 +146,8 @@ class TasksDispach
         void initIndice();
 
     public:
-        int numTypeTh;
-        int nbTh;
+        int  numTypeTh;
+        int  nbTh;
         bool qSave;
         bool qSlipt;
         bool qDeferred;
@@ -159,9 +159,10 @@ class TasksDispach
         auto end(); 
         auto size(); 
 
-        int getNbMaxThread();
+        int  getNbMaxThread();
         void init(int numType,int nbThread,bool qsaveInfo);
         void setFileName(std::string s);
+        void setNbThread(int v);
 
         //BEGIN::multithread specx part
         template<class Function>
@@ -210,8 +211,8 @@ class TasksDispach
 
 TasksDispach::TasksDispach() { 
     nbThTotal=std::thread::hardware_concurrency();
+    nbTh=nbThTotal;
     numTypeTh=2; 
-    nbTh=1;
     qSave=false;
     FileName="TestDispach";
     qSlipt=false;
@@ -243,8 +244,13 @@ auto TasksDispach::size()
 
 void TasksDispach::initIndice()
 {
-    indice.clear();
-    for (int i = 1; i <= nbTh; ++i)  { indice.push_back(i); }
+    indice.clear(); for (int i = 1; i <= nbTh; ++i)  { indice.push_back(i); }
+}
+
+void TasksDispach::setNbThread(int v)
+{
+    nbTh=std::min(v,nbThTotal);
+    initIndice();
 }
 
 void TasksDispach::init(int numType,int nbThread,bool qsaveInfo)
@@ -578,8 +584,12 @@ Function TasksDispach::run(Function myFunc)
 
 class TasksDispachComplex 
 {
+        int nbThTotal;   
     public:
         int nbTh;
+
+        void setNbThread(int v);
+        int  getNbMaxThread();
 
         template <typename ... Ts>
             auto parameters(Ts && ... ts);
@@ -596,7 +606,19 @@ class TasksDispachComplex
 
 TasksDispachComplex::TasksDispachComplex()
 {
-    int nbTh=2;
+    nbThTotal=std::thread::hardware_concurrency();
+    nbTh=nbThTotal;
+}
+
+void TasksDispachComplex::setNbThread(int v)
+{
+    nbTh=std::min(v,nbThTotal);
+}
+
+int TasksDispachComplex::getNbMaxThread()
+{
+    nbThTotal=std::thread::hardware_concurrency();
+    return(nbThTotal);
 }
 
 template <typename ... Ts>
@@ -638,4 +660,62 @@ void TasksDispachComplex::runTaskLoop( Ts && ... ts )
             std::async(std::launch::async,LamdaTransfert));
     }
     for( auto& r : futures){ auto a =  r.get(); }
+}
+
+
+
+//=======================================================================================================================
+//...
+//=======================================================================================================================
+
+
+void testScanAllThreadMethods()
+{
+    int qPutLittleTroublemaker=true;
+    int time_sleep= 100000;
+    auto P001=[time_sleep,qPutLittleTroublemaker](const int i,double& s) {  
+            double sum=0.0; 
+            for(int j=0;j<100;j++) { sum+=double(j); }
+            if (qPutLittleTroublemaker) {
+                srand((unsigned)time(0)); int time_sleep2 = rand() % 5000 + 1; usleep(time_sleep2); 
+            }
+            usleep(time_sleep);
+            s=sum+i;      
+        return true;
+    };
+
+    bool qChrono=false;
+
+    TasksDispach Fg1; 
+    int nbThreads = Fg1.nbTh;
+    //int nbThreads = 96;
+    Color(7); std::cout<<"Test Scan [";
+    Color(3); std::cout<<nbThreads;
+    Color(7); std::cout<<"] Thread Methods >>> ";
+    Fg1.setFileName("Results"); 
+    Fg1.init(1,nbThreads,true); Fg1.qViewChrono=qChrono; 
+    std::vector<double> valuesVec1=Fg1.sub_run_multithread_beta(P001);
+    double Value1=std::reduce(valuesVec1.begin(),valuesVec1.end()); 
+
+    TasksDispach Fg2; 
+    Fg2.setFileName("Results"); 
+    Fg2.init(1,nbThreads,true); Fg2.qViewChrono=qChrono; 
+    std::vector<double> valuesVec2=Fg2.sub_run_async_beta(P001);
+    double Value2=std::reduce(valuesVec2.begin(),valuesVec2.end()); 
+
+    TasksDispach Fg3; 
+    Fg3.setFileName("Results"); 
+    Fg3.init(2,nbThreads,true); Fg3.qViewChrono=qChrono; 
+    std::vector<double> valuesVec3=Fg3.sub_run_specx(P001);
+    double Value3=std::reduce(valuesVec3.begin(),valuesVec3.end()); 
+    if ((Value1==Value2) && (Value1==Value3)) {
+        Color(2); std::cout <<"OK"<< "\n"; 
+    } 
+    else 
+    {
+        Color(1); std::cout <<"ERROR "<<"m1:"<<Value1<<" m2:"<<Value2<<" m3:"<<Value3<< "\n"; 
+    }
+    std::cout << "\n"; 
+    Color(7);
+    std::cout << "\n"; 
 }

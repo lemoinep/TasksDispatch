@@ -215,7 +215,7 @@ void activeBlockTest001()
     std::cout<<"\n";
     std::cout<<"PI method std::async"<<"\n";
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
-    FgCalculIntegral.init(1,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); FgCalculIntegral.qViewChrono=true;
+    FgCalculIntegral.init(1,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); FgCalculIntegral.qViewChrono=false;
     FgCalculIntegral.run(MyAlgo000);
     Color(7);
 
@@ -226,7 +226,7 @@ void activeBlockTest001()
     /*
     std::cout<<"PI method Specx"<<"\n";
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
-    FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); FgCalculIntegral.qViewChrono=true;
+    FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); FgCalculIntegral.qViewChrono=false;
     FgCalculIntegral.run(MyAlgo000);
     Color(7);
     std::cout << "\n"; 
@@ -259,7 +259,7 @@ void activeBlockTest001_Beta(int nbThreads)
     std::cout<<"PI method (2) STD::ASYNC"<<"\n";
     TasksDispach Fg1; 
     Fg1.setFileName("Test with STD::ASYNC2"); 
-    Fg1.init(1,nbThreads,true);  Fg1.qInfo=false; Fg1.qViewChrono=true; Fg1.qSave=true; Fg1.setFileName("TestDispachIntegral");
+    Fg1.init(1,nbThreads,true);  Fg1.qInfo=false; Fg1.qViewChrono=false; Fg1.qSave=true; Fg1.setFileName("TestDispachIntegral");
     std::vector<double> valuesVec1=Fg1.sub_run_async_beta(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec1[k] << " ";  } 
     std::cout << "\n"; 
@@ -275,7 +275,7 @@ void activeBlockTest001_Beta(int nbThreads)
     std::cout<<"PI method (2) Specx"<<"\n";
     TasksDispach Fg2; 
     Fg2.setFileName("Test with STD::ASYNC2"); 
-    Fg2.init(2,nbThreads,true);  Fg2.qInfo=false; Fg2.qViewChrono=true; Fg2.qSave=true; Fg2.setFileName("TestDispachIntegral");
+    Fg2.init(2,nbThreads,true);  Fg2.qInfo=false; Fg2.qViewChrono=false; Fg2.qSave=true; Fg2.setFileName("TestDispachIntegral");
     std::vector<double> valuesVec2=Fg2.sub_run_specx(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec2[k] << " ";  } 
     std::cout << "\n"; 
@@ -322,7 +322,7 @@ void activeBlockTest002()
     std::cout<<"Calcul with std::async"<<"\n";
     VecR.clear();
     TasksDispach FgCalcul; 
-    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachSum");  FgCalcul.qViewChrono=true;
+    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachSum");  FgCalcul.qViewChrono=false;
     FgCalcul.run(MyAlgo000);
     std::cout << "Vec A= "; 
     for (auto it = VecA.begin(); it != VecA.end(); it++) { std::cout << *it << " "; }
@@ -338,7 +338,7 @@ void activeBlockTest002()
     std::cout << "\n"; 
     std::cout<<"Calcul with Specx"<<"\n";
     VecR.clear();
-    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachSum"); FgCalcul.qViewChrono=true;    //FgCalcul.qSave=false; 
+    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachSum"); FgCalcul.qViewChrono=false;    //FgCalcul.qSave=false; 
     FgCalcul.run(MyAlgo000);
     std::cout << "Vec A= "; 
     for (auto it = VecA.begin(); it != VecA.end(); it++) { std::cout << *it << " "; }
@@ -390,14 +390,14 @@ void activeBlockTest003()
     };
 
     TasksDispach FgCalcul; 
-    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachMult"); FgCalcul.qViewChrono=true;
+    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachMult"); FgCalcul.qViewChrono=false;
     FgCalcul.run(MyAlgo000);
 
     std::cout<<"MatR=MatA*MatB with STD::ASYNC"<< "\n";
     WriteMat(MatR,row,col);
 
 
-    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachMult"); FgCalcul.qViewChrono=true;
+    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachMult"); FgCalcul.qViewChrono=false;
     FgCalcul.run(MyAlgo000);
 
     std::cout<<"MatR=MatA*MatB with Specx"<< "\n";
@@ -803,7 +803,7 @@ void activeBlockTestVector1(int time_sleep)
     std::cout<<"With std:async level 1"<< "\n";
     TasksDispach Fg; 
     Fg.setFileName("Test"); 
-    Fg.init(1,nbThreads,true);  Fg.qInfo=false;  Fg.qViewChrono=true;
+    Fg.init(1,nbThreads,true);  Fg.qInfo=false;  Fg.qViewChrono=false;
     Fg.run(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << R[k] << " ";  } 
     std::cout << "\n"; 
@@ -835,8 +835,8 @@ void activeBlockTestVector2(int time_sleep)
     std::vector<double> valuesVec;
 
     std::cout<<"With multithread level 2"<< "\n";
-    Fg.setFileName("With std:async level 2 "); 
-    Fg.init(1,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true; Fg.qSave=true;
+    Fg.setFileName("Results"); 
+    Fg.init(1,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=false; Fg.qSave=false;
     valuesVec=Fg.sub_run_multithread_beta(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
     std::cout << "\n"; 
@@ -845,7 +845,7 @@ void activeBlockTestVector2(int time_sleep)
 
     std::cout<<"With std:async level 2"<< "\n";
     Fg.setFileName("With std:async level 2 "); 
-    Fg.init(1,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true; Fg.qSave=true;
+    Fg.init(1,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=false; Fg.qSave=true;
     valuesVec=Fg.sub_run_async_beta(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
     std::cout << "\n"; 
@@ -853,7 +853,7 @@ void activeBlockTestVector2(int time_sleep)
     std::cout << "\n"; 
 
     std::cout<<"With specx level 2"<< "\n";
-    Fg.init(2,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true; Fg.qSave=true;
+    Fg.init(2,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=false; Fg.qSave=true;
     valuesVec=Fg.sub_run_specx(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
     std::cout << "\n"; 
@@ -863,6 +863,7 @@ void activeBlockTestVector2(int time_sleep)
 
 //===============================================================================================================
 
+//===============================================================================================================
 
 
 
@@ -935,7 +936,7 @@ void activeBlock0009()
     };
 
     TasksDispach Fg; 
-    Fg.init(0,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=true; Fg.qSave=true;
+    Fg.init(0,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=false; Fg.qSave=true;
     Fg.RunTaskInNumCPU(2,FC1);
     std::cout << "val1="<<val1<< std::endl;
     std::cout << "\n"<< "\n";
@@ -945,9 +946,6 @@ void activeBlock0009()
     Color(7);
     std::cout << "\n"; 
     sleep(10);
-
-
-
 }
 
 
@@ -977,10 +975,17 @@ int main(int argc, const char** argv) {
   bool qPlayNext=true;
   qPlayNext=false;
 
+
+
+  testScanAllThreadMethods();
+
+  /*  
   std::cout << std::endl;
   std::cout << "<<< Test Scan >>>" << std::endl;
   activeBlockTestVector2(100000);
   std::cout << std::endl;
+  */
+
 
 
 // BEGIN::TESTS 
