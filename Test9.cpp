@@ -954,7 +954,7 @@ void activeBlock0009()
 void activeBlock0010()
 {   
     int val1=0; 
-    std::vector<int> NumCPU={1,2,55,80};
+    const std::vector<int> NumCPU={1,2,55,80};
     std::cout << "List Num CPU="<<"\n";
     for (int x : NumCPU) { std::cout << x << " "; }
     std::cout << "\n"<< "\n"; 
@@ -972,12 +972,16 @@ void activeBlock0010()
 }
 
 
-
-
 int main(int argc, const char** argv) {
 
   bool qPlayNext=true;
   qPlayNext=false;
+
+  std::cout << std::endl;
+  std::cout << "<<< Test Scan >>>" << std::endl;
+  activeBlockTestVector2(100000);
+  std::cout << std::endl;
+
 
 // BEGIN::TESTS 
   if (qPlayNext) {
