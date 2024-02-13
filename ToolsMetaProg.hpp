@@ -262,3 +262,48 @@ void forward_pack(F&& f, Ts&&... args)
 
 //===============================================================================
 
+template<class Tuple, std::size_t N>
+struct TuplePrinter
+{
+    static void print_tuple(const Tuple& t)
+    {
+        TuplePrinter<Tuple, N - 1>::print_tuple(t);
+        std::cout << ", " << std::get<N-1>(t);
+    }
+};
+ 
+template<class Tuple>
+struct TuplePrinter<Tuple, 1>
+{
+    static void print_tuple(const Tuple& t)
+    {
+        std::cout << std::get<0>(t);
+    }
+};
+ 
+template<typename... Args, std::enable_if_t<sizeof...(Args) == 0, int> = 0>
+void print_tuple(const std::tuple<Args...>& t)
+{
+    std::cout << "()\n";
+}
+ 
+template<typename... Args, std::enable_if_t<sizeof...(Args) != 0, int> = 0>
+void print_tuple(const std::tuple<Args...>& t)
+{
+    std::cout << "(";
+    TuplePrinter<decltype(t), sizeof...(Args)>::print_tuple(t);
+    std::cout << ")\n";
+}
+
+//===============================================================================
+
+template<typename ...T, size_t... I>
+auto makeTupleReferencesSub(std::tuple<T...>& t ,  std::index_sequence<I...>)
+{ return std::tie(*std::get<I>(t)...) ;}
+
+template<typename ...T>
+auto makeTupleReferences( std::tuple<T...>& t ){
+	return makeTupleReferencesSub<T...>(t, std::make_index_sequence<sizeof...(T)>{});
+}
+
+//===============================================================================
