@@ -30,8 +30,9 @@
 
 #include "napp.hpp"
 
+
 //=======================================================================================================================
-//...
+// Meta function tools allowing you to process an expression defined in Task
 //=======================================================================================================================
 
 constexpr auto& _parameters = NA::identifier<struct parameters_tag>;
@@ -148,7 +149,7 @@ namespace Frontend
 
 
 //================================================================================================================================
-// CLASS TASKsDISPACH
+// CLASS TASKsDISPACH: Provide a family of multithreaded functions...
 //================================================================================================================================
 
 
@@ -601,8 +602,6 @@ Function TasksDispach::run(Function myFunc)
 // CLASS TASKsDISPACH Complex
 //================================================================================================================================
 
-
-
 class TasksDispachComplex 
 {
     int nbThTotal;   
@@ -613,6 +612,7 @@ class TasksDispachComplex
         bool qViewChrono;
         bool qInfo;
         bool qSave;
+        bool qDeferred;
 
         void setNbThread(int v);
         int  getNbMaxThread();
@@ -642,6 +642,7 @@ TasksDispachComplex::TasksDispachComplex()
     qViewChrono=false;
     qInfo=false;
     qSave=false;
+    qDeferred=true;
     FileName="TestDispachComplex";
 }
 
@@ -706,13 +707,16 @@ void TasksDispachComplex::runTaskLoopAsync( Ts && ... ts )
             return true; 
 		};
 
-        /*
-        futures.emplace_back(
-            std::async(std::launch::async,LamdaTransfert));
-        */
-
-        futures.emplace_back(
+        if (qDeferred)
+        {
+            futures.emplace_back(
             std::async(std::launch::deferred,LamdaTransfert));
+        }
+        else
+        {
+            futures.emplace_back(
+                std::async(std::launch::async,LamdaTransfert));
+        }
     }
     for( auto& r : futures){ auto a =  r.get(); }
     auto end = std::chrono::steady_clock::now();
@@ -795,8 +799,8 @@ void TasksDispachComplex::runTaskLoopSpecx( Ts && ... ts )
 
     if (qSave)
     {
-        runtime_Specx.generateDot("Test.dot", true);
-        runtime_Specx.generateTrace("Test.svg");   
+        runtime_Specx.generateDot(FileName+".dot", true);
+        runtime_Specx.generateTrace(FileName+".svg");  
     }
 
     if (qViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
