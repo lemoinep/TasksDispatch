@@ -124,8 +124,10 @@ namespace Backend{
 }
 
 
+
 namespace Frontend
 {
+/*
     template <typename ... Ts>
     void
     runTask( Ts && ... ts )
@@ -137,6 +139,7 @@ namespace Frontend
 
         std::apply( [&runtime](auto... args){ runtime.task(args...); }, std::tuple_cat( Backend::makeSpData( parameters ), std::make_tuple( task ) ) );
     }
+*/
 
     template <typename ... Ts>
     auto parameters(Ts && ... ts)
@@ -145,6 +148,7 @@ namespace Frontend
         return std::forward_as_tuple( std::forward<Ts>(ts)... );
     }
 }
+
 
 
 
@@ -609,6 +613,7 @@ class TasksDispachComplex
 
     public:
         int nbTh;
+        int numTypeTh;
         bool qViewChrono;
         bool qInfo;
         bool qSave;
@@ -628,6 +633,9 @@ class TasksDispachComplex
 
         template <typename ... Ts>
             void runTaskLoopSpecx( Ts && ... ts );
+
+        template <typename ... Ts>
+            void run( Ts && ... ts );
         
         TasksDispachComplex(void);
 
@@ -643,8 +651,10 @@ TasksDispachComplex::TasksDispachComplex()
     qInfo=false;
     qSave=false;
     qDeferred=true;
+    numTypeTh=0;
     FileName="TestDispachComplex";
 }
+
 
 void TasksDispachComplex::setFileName(std::string s)
 {
@@ -807,6 +817,22 @@ void TasksDispachComplex::runTaskLoopSpecx( Ts && ... ts )
 }
 
 
+template <typename ... Ts>
+void TasksDispachComplex::run( Ts && ... ts )
+{
+  switch(numTypeTh) {
+    case 1: return(runTaskLoopAsync(&& ts));
+    break;
+    case 2: return(runTaskLoopSpecx(&& ts));
+    break;
+    default:
+        return(runTaskLoopAsync(&& ts));
+  }
+}
+
+
+
+
 
 //================================================================================================================================
 // TOOLS: A panel of functions allowing you to control the functionality of class TasksDispach and TasksDispachComplex
@@ -862,6 +888,7 @@ void testScanAllThreadMethods()
     Color(7);
     std::cout << "\n"; 
 }
+
 
 //================================================================================================================================
 // 

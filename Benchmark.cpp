@@ -974,20 +974,31 @@ void activeBlockTest_runtask_LoopAsync() //OK, It works
     std::cout <<"[TestRunTaskLoop with Async]"<<"\n";
     int val1=0; 
     std::cout <<"val1="<<val1<< "\n";
- 
-    auto FC1=[&](const int &v,int &w) {  
+    int val0=0;
+
+    auto FC1=[&](const int &v,double &w) {  
+        std::cout <<"--------------------------------------"<< "\n";
+        std::cout <<"Async: I am happy to see you !!!"<< "\n";
+        std::cout <<"Val Input="<<v<< "\n";
+        std::cout <<"Val Output="<<w<< "\n";
+        std::cout <<"--------------------------------------"<< "\n";
         w=w+v;
         usleep(1000);
+        val1=val1+99999999;
         return true;
     };
 
-    int valInput=3;
-    TasksDispachComplex Test1;
-    Test1.setNbThread(6);
+    const int valInput1=3;
+    double valOutput1=1.5;
+
+    TasksDispachComplex Test1; Test1.qSave=true;
+    Test1.setNbThread(2);
     Test1.runTaskLoopAsync( 
-        _parameters=Frontend::parameters(valInput,val1),
+        _parameters=Frontend::parameters(valInput1,valOutput1),
         _task=FC1);
+
     std::cout <<"val1="<<val1<< "\n";
+    std::cout <<"valOutput1="<<valOutput1<< "\n";
 }
 
 
@@ -1000,7 +1011,7 @@ void activeBlockTest_runtask_LoopSpecx()
  
     auto FC1=[&](const int &v,double &w) {  
         std::cout <<"--------------------------------------"<< "\n";
-        std::cout <<"I am happy to see you !!!"<< "\n";
+        std::cout <<"Specx: I am happy to see you !!!"<< "\n";
         std::cout <<"Val Input="<<v<< "\n";
         std::cout <<"Val Output="<<w<< "\n";
         std::cout <<"--------------------------------------"<< "\n";
