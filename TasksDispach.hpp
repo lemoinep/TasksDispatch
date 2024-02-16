@@ -156,7 +156,8 @@ namespace Frontend
 // CLASS TASKsDISPACH: Provide a family of multithreaded functions...
 //================================================================================================================================
 
-
+// Nota: The objective is to provide a range of tools in the case of using a single variable in multithreading.
+// In the case of work with several variables use the class TasksDispachComplex.
 
 void *WorkerInNumCPU(void *arg) {
     std::function<void()> *func = (std::function<void()>*)arg;
@@ -172,6 +173,7 @@ class TasksDispach
         void initIndice();
 
     public:
+         //BEGIN::Small functions and variables to manage initialization parameters
         int  numTypeTh;
         int  nbTh;
         bool qSave;
@@ -180,7 +182,7 @@ class TasksDispach
         bool qViewChrono;
         bool qInfo;
         std::string FileName;
-
+       
         auto begin(); 
         auto end(); 
         auto size(); 
@@ -189,6 +191,7 @@ class TasksDispach
         void init(int numType,int nbThread,bool qsaveInfo);
         void setFileName(std::string s);
         void setNbThread(int v);
+         //END::Small functions and variables to manage initialization parameters
 
         //BEGIN::multithread specx part
         template<class Function>
@@ -585,8 +588,6 @@ Function TasksDispach::sub_run_specx_R(Function myFunc)
 }
 
 
-
-
 template<class Function>
 Function TasksDispach::run(Function myFunc)
 {
@@ -628,14 +629,15 @@ class TasksDispachComplex
         template <typename ... Ts>
             void runTask( Ts && ... ts );
 
-        template <typename ... Ts>
-            void runTaskLoopAsync( Ts && ... ts );
-
-        template <typename ... Ts>
-            void runTaskLoopSpecx( Ts && ... ts );
 
         template <typename ... Ts>
             void run( Ts && ... ts );
+
+            template <typename ... Ts>
+                void sub_runTaskLoopAsync( Ts && ... ts );
+
+            template <typename ... Ts>
+                void sub_runTaskLoopSpecx( Ts && ... ts );
         
         TasksDispachComplex(void);
 
@@ -696,7 +698,7 @@ void TasksDispachComplex::runTask( Ts && ... ts )
 }
 
 template <typename ... Ts>
-void TasksDispachComplex::runTaskLoopAsync( Ts && ... ts )
+void TasksDispachComplex::sub_runTaskLoopAsync( Ts && ... ts )
 {
     auto begin = std::chrono::steady_clock::now();
     auto args = NA::make_arguments( std::forward<Ts>(ts)... );
@@ -704,7 +706,7 @@ void TasksDispachComplex::runTaskLoopAsync( Ts && ... ts )
     auto && parameters = args.get_else(_parameters,std::make_tuple());
     Backend::Runtime runtime;
     std::vector< std::future< bool > > futures;
-    std::cout <<"nbTh="<<nbTh<< "\n";
+    std::cout <<"std::Async nbTh="<<nbTh<< "\n";
 
     for (int k = 0; k < nbTh; k++) {
         if (qInfo) { std::cout<<"Call num Thread futures="<<k<<"\n"; }
@@ -735,7 +737,7 @@ void TasksDispachComplex::runTaskLoopAsync( Ts && ... ts )
 
 /*
 template <typename ... Ts>
-void TasksDispachComplex::runTaskLoopMultithread( Ts && ... ts )
+void TasksDispachComplex::sub_runTaskLoopMultithread( Ts && ... ts )
 {
     //add mutex
     auto begin = std::chrono::steady_clock::now();
@@ -767,14 +769,14 @@ void TasksDispachComplex::runTaskLoopMultithread( Ts && ... ts )
 
 
 template <typename ... Ts>
-void TasksDispachComplex::runTaskLoopSpecx( Ts && ... ts )
+void TasksDispachComplex::sub_runTaskLoopSpecx( Ts && ... ts )
 {
     auto begin = std::chrono::steady_clock::now();
     auto args = NA::make_arguments( std::forward<Ts>(ts)... );
     auto && task = args.get(_task);
     auto && parameters = args.get_else(_parameters,std::make_tuple());
     Backend::Runtime runtime;
-    std::cout <<"nbTh="<<nbTh<< "\n";
+    std::cout <<"Specx nbTh="<<nbTh<< "\n";
 
     SpRuntime runtime_Specx(nbTh); 
 
@@ -820,17 +822,14 @@ void TasksDispachComplex::runTaskLoopSpecx( Ts && ... ts )
 template <typename ... Ts>
 void TasksDispachComplex::run( Ts && ... ts )
 {
-  switch(numTypeTh) {
-    case 1: return(runTaskLoopAsync(&& ts));
-    break;
-    case 2: return(runTaskLoopSpecx(&& ts));
-    break;
-    default:
-        return(runTaskLoopAsync(&& ts));
-  }
+    switch(numTypeTh) {
+        case 1: sub_runTaskLoopAsync(std::forward<Ts>(ts)...);
+        break;
+        case 2: sub_runTaskLoopSpecx(std::forward<Ts>(ts)...);
+        break;
+        default: sub_runTaskLoopAsync(std::forward<Ts>(ts)...);
+    }
 }
-
-
 
 
 

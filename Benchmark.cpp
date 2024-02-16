@@ -992,8 +992,8 @@ void activeBlockTest_runtask_LoopAsync() //OK, It works
     double valOutput1=1.5;
 
     TasksDispachComplex Test1; Test1.qSave=true;
-    Test1.setNbThread(2);
-    Test1.runTaskLoopAsync( 
+    Test1.setNbThread(1);
+    Test1.run( 
         _parameters=Frontend::parameters(valInput1,valOutput1),
         _task=FC1);
 
@@ -1024,9 +1024,10 @@ void activeBlockTest_runtask_LoopSpecx()
     const int valInput1=3;
     double valOutput1=1.5;
 
-    TasksDispachComplex Test1; Test1.qSave=true;
+    TasksDispachComplex Test1; Test1.qSave=true; Test1.numTypeTh=2;
     Test1.setNbThread(2);
-    Test1.runTaskLoopSpecx(
+
+    Test1.run(
         _parameters=Frontend::parameters(valInput1,valOutput1),
         _task=FC1);
 
