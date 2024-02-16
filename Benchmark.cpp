@@ -197,7 +197,7 @@ void activeBlockTest_Integral001()
     integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
     std::cout<<"PI Value= "<<integralValue<<"\n";
 
-    /*
+    
     std::cout<<"PI method Specx"<<"\n";
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
     FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); FgCalculIntegral.qViewChrono=false;
@@ -205,7 +205,7 @@ void activeBlockTest_Integral001()
     Color(7);
     std::cout << "\n"; 
     integralValue=h*std::reduce(valuesVec.begin(),valuesVec.end()); 
-    std::cout<<"PI Value= "<<integralValue<<"\n"*/
+    std::cout<<"PI Value= "<<integralValue<<"\n";
     
 }
 
@@ -234,7 +234,7 @@ void activeBlockTest_Integral002(int nbThreads)
     TasksDispach Fg1; 
     Fg1.setFileName("Test with STD::ASYNC2"); 
     Fg1.init(1,nbThreads,true);  Fg1.qInfo=false; Fg1.qViewChrono=false; Fg1.qSave=true; Fg1.setFileName("TestDispachIntegral");
-    std::vector<double> valuesVec1=Fg1.sub_run_async_beta(MyAlgo000);
+    std::vector<double> valuesVec1=Fg1.run_beta(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec1[k] << " ";  } 
     std::cout << "\n"; 
     Color(7);
@@ -250,7 +250,7 @@ void activeBlockTest_Integral002(int nbThreads)
     TasksDispach Fg2; 
     Fg2.setFileName("Test with STD::ASYNC2"); 
     Fg2.init(2,nbThreads,true);  Fg2.qInfo=false; Fg2.qViewChrono=false; Fg2.qSave=true; Fg2.setFileName("TestDispachIntegral");
-    std::vector<double> valuesVec2=Fg2.sub_run_specx(MyAlgo000);
+    std::vector<double> valuesVec2=Fg2.run_beta(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec2[k] << " ";  } 
     std::cout << "\n"; 
     Color(7);
@@ -259,43 +259,6 @@ void activeBlockTest_Integral002(int nbThreads)
     std::cout<<"PI Value= "<<integralValue<<"\n";
     std::cout << "\n"; 
 }
-
-
-void activeBlockTest_Integral003()
-{
-    int nbThreads = 96;
-    double integralValue=0.0;
-    double R[nbThreads];
-    for (int k=0; k<nbThreads; k++) { R[k]=0.0; }
-
-    auto MyAlgo000=[&R](const int& k) mutable {  
-            double sum=0.0; double x;
-            for(int j=0;j<10;j++)
-            { 
-                sum+=double(j);
-            }
-            usleep(100);
-            R[k]=sum+double(k);      
-            //std::cout<<"Sum "<<R[k]<<"\n";
-        return true;
-    };
-   
-    TasksDispach Fg; 
-    Fg.setFileName("TestDispachIntegral"); 
-    Fg.init(1,nbThreads,true);  Fg.qInfo=false;
-    Fg.run(MyAlgo000);
-    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << R[k] << " ";  } 
-    std::cout << "\n"; 
-
-    for (int k=0; k<nbThreads; k++) { R[k]=0.0; }
-    Fg.init(2,nbThreads,true); Fg.qInfo=false;
-    Fg.run(MyAlgo000);
-
-    std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << R[k] << " ";  } 
-    Color(7);
-    std::cout << "\n"; 
-}
-
 
 
 //================================================================================================================================
@@ -395,7 +358,7 @@ void activeBlockTest_Vector(int time_sleep)
 
     std::cout<<"With specx level 2"<< "\n";
     Fg.init(2,nbThreads,true);  Fg.qInfo=false; Fg.qViewChrono=false; Fg.qSave=true;
-    valuesVec=Fg.sub_run_specx(MyAlgo000);
+    valuesVec=Fg.sub_run_specx_beta(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec[k] << " ";  } 
     std::cout << "\n"; 
     Color(7);
@@ -512,6 +475,48 @@ void activeBlockTest_runtask_LoopSpecx()
     //END::Run multithread with TaskDispachCompex
 }
 
+
+
+void activeBlockTest_Integral()
+{
+    std::cout <<"[TestRunTaskLoop Integral with Specx]"<<"\n";
+    int nbThreads=2;
+    long int nbN=1000000;
+    int sizeBlock=nbN/nbThreads;
+    int diffBlock=nbN-sizeBlock*nbThreads;
+    double h=1.0/double(nbN);
+    double integralValue=0.0;
+    std::vector<double> valuesVec;
+    valuesVec.clear();
+
+    //BEGIN::Lambda function part: the module that will be executed...
+    auto FC1=[h,sizeBlock](const int k,double& s) {  
+            int vkBegin=k*sizeBlock;
+            int vkEnd=(k+1)*sizeBlock;
+            double sum=0.0; double x=0.0;
+            for(int j=vkBegin;j<vkEnd;j++) { x=h*double(j); sum+=4.0/(1.0+x*x); }
+            s=sum;
+        return true;
+    };
+    //END::Lambda function part
+
+    const int valInput1=0;
+    double valOutput1=1.5;
+
+    //BEGIN::Run multithread with TaskDispachCompex
+    TasksDispachComplex Test1; 
+    Test1.numTypeTh=1; 
+    Test1.qSave=true; 
+    Test1.setNbThread(nbThreads);
+    Test1.run(
+        _parameters=Frontend::parameters(valInput1,valOutput1),
+        _task=FC1);
+
+    //END::Run multithread with TaskDispachCompex
+}
+
+//================================================================================================================================
+//================================================================================================================================
 //================================================================================================================================
 
 
@@ -529,16 +534,14 @@ int main(int argc, const char** argv) {
   
 
 
-
-
 // BEGIN::TEST CALCUL INTEGRAL
 qPlayNext=true;
-qPlayNext=false;
+//qPlayNext=false;
 if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Test calcul intergral  >>>" << std::endl;
-    activeBlockTest_Integral001();
-    std::cout << std::endl;
+    //activeBlockTest_Integral001();
+    //std::cout << std::endl;
     activeBlockTest_Integral002(6);
     std::cout << std::endl;
 }

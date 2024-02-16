@@ -159,11 +159,13 @@ namespace Frontend
 // Nota: The objective is to provide a range of tools in the case of using a single variable in multithreading.
 // In the case of work with several variables use the class TasksDispachComplex.
 
+
 void *WorkerInNumCPU(void *arg) {
     std::function<void()> *func = (std::function<void()>*)arg;
     (*func)();
     pthread_exit(NULL);
 }
+
 
 class TasksDispach
 {
@@ -193,7 +195,7 @@ class TasksDispach
         void setNbThread(int v);
          //END::Small functions and variables to manage initialization parameters
 
-        //BEGIN::multithread specx part
+        //BEGIN::multithread with std::ansync or Specx or ... part
         template<class Function>
             Function run(Function myFunc);
                 template<class Function>
@@ -201,15 +203,17 @@ class TasksDispach
                 template<class Function>
                     Function sub_run_async(Function myFunc);
                 template<class Function>
-                    Function sub_run_specx_R(Function myFunc);
+                    Function sub_run_specx(Function myFunc);
 
+        template<class Function>
+            std::vector<double> run_beta(Function myFunc);
                 template<class Function>
                     std::vector<double> sub_run_multithread_beta(Function myFunc);
                 template<class Function> 
-                    std::vector<double> sub_run_specx(Function myFunc);
+                    std::vector<double> sub_run_specx_beta(Function myFunc);
                 template<class Function>
                     std::vector<double> sub_run_async_beta(Function myFunc);
-        //END::multithread specx part
+        //END::multithread  part
 
         //BEGIN::Detach part
         template<typename FctDetach>
@@ -253,7 +257,10 @@ TasksDispach::TasksDispach() {
 }
 
 TasksDispach::~TasksDispach(void) { 
+    //... must be defined
 }
+
+
 
 
 auto TasksDispach::begin()
@@ -531,7 +538,7 @@ std::vector<double> TasksDispach::sub_run_async_beta(Function myFunc)
 
 
 template<class Function>
-std::vector<double> TasksDispach::sub_run_specx(Function myFunc)
+std::vector<double> TasksDispach::sub_run_specx_beta(Function myFunc)
 {
         std::vector<double> valuesVec(nbTh,0); 
         SpRuntime runtime(nbTh);  
@@ -560,7 +567,7 @@ std::vector<double> TasksDispach::sub_run_specx(Function myFunc)
 
 
 template<class Function>
-Function TasksDispach::sub_run_specx_R(Function myFunc)
+Function TasksDispach::sub_run_specx(Function myFunc)
 {
         SpRuntime runtime(nbTh);  
         auto begin = std::chrono::steady_clock::now();
@@ -594,10 +601,23 @@ Function TasksDispach::run(Function myFunc)
   switch(numTypeTh) {
     case 1: return(sub_run_async(myFunc));
     break;
-    case 2: return(sub_run_specx_R(myFunc));
+    case 2: return(sub_run_specx(myFunc));
     break;
     default:
         return(sub_run_multithread(myFunc));
+  }
+}
+
+template<class Function>
+std::vector<double> TasksDispach::run_beta(Function myFunc)
+{
+  switch(numTypeTh) {
+    case 1: return(sub_run_async_beta(myFunc));
+    break;
+    case 2: return(sub_run_specx_beta(myFunc));
+    break;
+    default:
+        return(sub_run_multithread_beta(myFunc));
   }
 }
 
@@ -609,10 +629,14 @@ Function TasksDispach::run(Function myFunc)
 
 class TasksDispachComplex 
 {
-    int nbThTotal;   
-    std::string FileName;
+    private:
+        int nbThTotal;   
+        std::string FileName;
+        template <typename ... Ts>
+        auto parameters(Ts && ... ts);
 
     public:
+        //BEGIN::Small functions and variables to manage initialization parameters
         int nbTh;
         int numTypeTh;
         bool qViewChrono;
@@ -622,14 +646,13 @@ class TasksDispachComplex
 
         void setNbThread(int v);
         int  getNbMaxThread();
+        void setFileName(std::string s);
+        //END::Small functions and variables to manage initialization parameters
 
         template <typename ... Ts>
-            auto parameters(Ts && ... ts);
+            void runTaskSimple( Ts && ... ts );
 
-        template <typename ... Ts>
-            void runTask( Ts && ... ts );
-
-
+        //BEGIN::multithread with std::ansync or Specx or ... part
         template <typename ... Ts>
             void run( Ts && ... ts );
 
@@ -638,10 +661,15 @@ class TasksDispachComplex
 
             template <typename ... Ts>
                 void sub_runTaskLoopSpecx( Ts && ... ts );
+        //END::multithread with std::ansync or Specx or ... part
+
+        //BEGIN::Thread affinity part
+        template <typename ... Ts>
+        void RunTaskInNumCPUs(const std::vector<int> & numCPU,Ts && ... ts);
+        //END::Thread affinity part
         
         TasksDispachComplex(void);
-
-        void setFileName(std::string s);
+        ~TasksDispachComplex(void);
 };
 
 
@@ -656,6 +684,12 @@ TasksDispachComplex::TasksDispachComplex()
     numTypeTh=0;
     FileName="TestDispachComplex";
 }
+
+TasksDispachComplex::~TasksDispachComplex()
+{
+    //... must be defined
+}
+
 
 
 void TasksDispachComplex::setFileName(std::string s)
@@ -680,8 +714,12 @@ auto TasksDispachComplex::parameters(Ts && ... ts)
     return std::forward_as_tuple( std::forward<Ts>(ts)... );
 }
 
+
+
+
+
 template <typename ... Ts>
-void TasksDispachComplex::runTask( Ts && ... ts )
+void TasksDispachComplex::runTaskSimple( Ts && ... ts )
 {
     auto begin = std::chrono::steady_clock::now();
     auto args = NA::make_arguments( std::forward<Ts>(ts)... );
@@ -779,17 +817,7 @@ void TasksDispachComplex::sub_runTaskLoopSpecx( Ts && ... ts )
     std::cout <<"Specx nbTh="<<nbTh<< "\n";
 
     SpRuntime runtime_Specx(nbTh); 
-
-
-    auto tpSpecxFront=Backend::makeSpData( parameters );
-        int NbtpSpecxFront=std::tuple_size<decltype(tpSpecxFront)>::value;
-        std::cout <<"Size Tuple Front="<<NbtpSpecxFront<< std::endl;
-
-    auto LambdaExpression=std::make_tuple( task );
-        int NbLambdaExpression=std::tuple_size<decltype(LambdaExpression)>::value;
-        std::cout <<"Size Tuple Parameters="<<NbLambdaExpression<< std::endl;
-        
-    //auto tpBackend=Backend::makeSpData( parameters );
+   
     auto tpBackend=Backend::makeSpDataSpecx( parameters );
          int NbtpBackend=std::tuple_size<decltype(tpBackend)>::value;
         std::cout <<"Size tpBackend="<<NbtpBackend<< std::endl;
@@ -830,6 +858,51 @@ void TasksDispachComplex::run( Ts && ... ts )
         default: sub_runTaskLoopAsync(std::forward<Ts>(ts)...);
     }
 }
+
+
+template <typename ... Ts>
+void TasksDispachComplex::RunTaskInNumCPUs(const std::vector<int> & numCPU,Ts && ... ts)
+{
+  int nbTh=numCPU.size();
+  pthread_t thread_array[nbTh];
+  pthread_attr_t pta_array[nbTh];
+
+  auto begin = std::chrono::steady_clock::now();
+  auto args = NA::make_arguments( std::forward<Ts>(ts)... );
+  auto && task = args.get(_task);
+  auto && parameters = args.get_else(_parameters,std::make_tuple());
+  Backend::Runtime runtime;
+
+  auto tp=std::tuple_cat( 
+					Backend::makeSpData( parameters ), 
+					std::make_tuple( task ) 
+				);
+  auto LamdaTransfert = [&]() {
+			std::apply([&runtime](auto... args){ runtime.task(args...); }, tp);
+            return true; 
+  };
+
+  std::function<void()> func =LamdaTransfert;
+
+  for (int i = 0; i < nbTh; i++) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(numCPU[i], &cpuset);
+    std::cout<<"Num CPU="<< numCPU[i] <<" activated"<<std::endl;
+    pthread_attr_init(&pta_array[i]);
+    pthread_attr_setaffinity_np(&pta_array[i], sizeof(cpuset), &cpuset);
+    if (pthread_create(&thread_array[i],&pta_array[i],WorkerInNumCPU,&func)) { std::cerr << "Error in creating thread" << std::endl; }
+  }
+
+  for (int i = 0; i < nbTh; i++) {
+        pthread_join(thread_array[i], NULL);
+  }
+
+  for (int i = 0; i < nbTh; i++) {
+        pthread_attr_destroy(&pta_array[i]);
+  }
+}
+
 
 
 
@@ -874,7 +947,7 @@ void testScanAllThreadMethods()
     TasksDispach Fg3; 
     Fg3.setFileName("Results"); 
     Fg3.init(2,nbThreads,true); Fg3.qViewChrono=qChrono; 
-    std::vector<double> valuesVec3=Fg3.sub_run_specx(P001);
+    std::vector<double> valuesVec3=Fg3.sub_run_specx_beta(P001);
     double Value3=std::reduce(valuesVec3.begin(),valuesVec3.end()); 
     if ((Value1==Value2) && (Value1==Value3)) {
         Color(2); std::cout <<"OK"<< "\n"; 
