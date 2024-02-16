@@ -477,6 +477,51 @@ void activeBlockTest_runtask_LoopSpecx()
 
 
 
+//================================================================================================================================
+// BLOCK TEST Affinity with TasksDispach
+//================================================================================================================================
+
+void activeBlockTest_runtask_Affinity2()
+{   
+    int val1=0; 
+    //BEGIN::Definition of CPUs used
+    std::cout << "List Num CPU="<<"\n";   
+    const std::vector<int> NumCPU={1,2,55,80};
+    for (int x : NumCPU) { std::cout << x << " "; }
+    std::cout << "\n"<< "\n"; 
+    const int valInput1=0;
+    double valOutput1=0;
+    //END::Definition of CPUs used
+
+    //BEGIN::Lambda function part: the module that will be executed...
+    auto FC1=[&](const int &k) {  
+        auto Num=sched_getcpu();
+        Color(Num); std::cout<<"HELLO form CPU="<<Num<<std::endl; Color(7);
+        val1++;
+        usleep(1000);
+        return true;
+    };
+    //END::Lambda function part
+
+    //BEGIN::Run multithread with TaskDispach
+    TasksDispachComplex Test1; 
+    Test1.setNbThread(2);
+    Test1.RunTaskInNumCPUs(NumCPU,
+        _parameters=Frontend::parameters(valInput1),
+        _task=FC1);
+    std::cout << "val1="<<val1<< std::endl;
+    Color(7);
+    //END::Run multithread with TaskDispach
+}
+
+//================================================================================================================================
+// BLOCK TEST ....
+//================================================================================================================================
+
+
+
+
+
 void activeBlockTest_Integral()
 {
     std::cout <<"[TestRunTaskLoop Integral with Specx]"<<"\n";
@@ -501,12 +546,11 @@ void activeBlockTest_Integral()
     //END::Lambda function part
 
     const int valInput1=0;
-    double valOutput1=1.5;
+    double valOutput1=0.0;
 
     //BEGIN::Run multithread with TaskDispachCompex
     TasksDispachComplex Test1; 
     Test1.numTypeTh=1; 
-    Test1.qSave=true; 
     Test1.setNbThread(nbThreads);
     Test1.run(
         _parameters=Frontend::parameters(valInput1,valOutput1),
@@ -536,7 +580,7 @@ int main(int argc, const char** argv) {
 
 // BEGIN::TEST CALCUL INTEGRAL
 qPlayNext=true;
-//qPlayNext=false;
+qPlayNext=false;
 if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< Test calcul intergral  >>>" << std::endl;
@@ -635,6 +679,20 @@ if (qPlayNext) {
     std::cout << std::endl;
 }
 // END::TEST TasksDispachComplex LoopSpecx
+
+
+
+
+// BEGIN::TEST MULTITHREAD AFFINITY with TasksDispach Complex
+qPlayNext=true;
+//qPlayNext=false;
+if (qPlayNext) {
+    std::cout << std::endl;
+    std::cout << "<<< TEST Multithread Affinity with TasksDispach Complex >>>" << std::endl;
+    activeBlockTest_runtask_Affinity2();
+    std::cout << std::endl;
+}
+// END::TEST MULTITHREAD AFFINITY with TasksDispach Complex
 
 
   std::cout << "<<< The End : Well Done >>>" << std::endl << std::endl;
