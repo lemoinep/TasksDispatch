@@ -643,6 +643,7 @@ class TasksDispachComplex
         bool qInfo;
         bool qSave;
         bool qDeferred;
+        bool qUseIndex;
 
         void setNbThread(int v);
         int  getNbMaxThread();
@@ -682,6 +683,7 @@ TasksDispachComplex::TasksDispachComplex()
     qSave=false;
     qDeferred=true;
     numTypeTh=0;
+    qUseIndex=false;
     FileName="TestDispachComplex";
 }
 
@@ -748,6 +750,8 @@ void TasksDispachComplex::sub_runTaskLoopAsync( Ts && ... ts )
 
     for (int k = 0; k < nbTh; k++) {
         if (qInfo) { std::cout<<"Call num Thread futures="<<k<<"\n"; }
+
+        if (qUseIndex) { std::get<1>(parameters)=k; }
 		auto tp=std::tuple_cat( 
 					Backend::makeSpData( parameters ), 
 					std::make_tuple( task ) 
@@ -768,6 +772,11 @@ void TasksDispachComplex::sub_runTaskLoopAsync( Ts && ... ts )
                 std::async(std::launch::async,LamdaTransfert));
         }
     }
+
+    
+   
+
+
     for( auto& r : futures){ auto a =  r.get(); }
     auto end = std::chrono::steady_clock::now();
     if (qViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
@@ -872,19 +881,19 @@ void TasksDispachComplex::RunTaskInNumCPUs(const std::vector<int> & numCPU,Ts &&
   auto && task = args.get(_task);
   auto && parameters = args.get_else(_parameters,std::make_tuple());
   Backend::Runtime runtime;
-
-  auto tp=std::tuple_cat( 
-					Backend::makeSpData( parameters ), 
-					std::make_tuple( task ) 
-				);
-  auto LamdaTransfert = [&]() {
-			std::apply([&runtime](auto... args){ runtime.task(args...); }, tp);
-            return true; 
-  };
-
-  std::function<void()> func =LamdaTransfert;
+  
 
   for (int i = 0; i < nbTh; i++) {
+    if (qUseIndex) { std::get<0>(parameters)=i; }
+    auto tp=std::tuple_cat( 
+                        Backend::makeSpData( parameters ), 
+                        std::make_tuple( task ) 
+                    );
+    auto LamdaTransfert = [&]() {
+                std::apply([&runtime](auto... args){ runtime.task(args...); }, tp);
+                return true; 
+    };
+    std::function<void()> func =LamdaTransfert;
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(numCPU[i], &cpuset);

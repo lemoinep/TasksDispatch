@@ -443,7 +443,7 @@ void activeBlockTest_runtask_LoopSpecx()
     std::cout <<"[TestRunTaskLoop with Specx]"<<"\n";
     int val1=0; 
     std::cout <<"val1="<<val1<< "\n";
-    int val0=0;
+    int val0=0; 
  
     //BEGIN::Lambda function part: the module that will be executed...
     auto FC1=[&](const int &v,double &w) {  
@@ -489,23 +489,24 @@ void activeBlockTest_runtask_Affinity2()
     const std::vector<int> NumCPU={1,2,55,80};
     for (int x : NumCPU) { std::cout << x << " "; }
     std::cout << "\n"<< "\n"; 
-    const int valInput1=0;
+    int valInput1=0;
     double valOutput1=0;
     //END::Definition of CPUs used
 
     //BEGIN::Lambda function part: the module that will be executed...
-    auto FC1=[&](const int &k) {  
+    auto FC1=[&](int &k) {  
         auto Num=sched_getcpu();
         Color(Num); std::cout<<"HELLO form CPU="<<Num<<std::endl; Color(7);
         val1++;
         usleep(1000);
+        std::cout<<"k="<<k<<std::endl;
+        k++;
         return true;
     };
     //END::Lambda function part
 
     //BEGIN::Run multithread with TaskDispach
     TasksDispachComplex Test1; 
-    Test1.setNbThread(2);
     Test1.RunTaskInNumCPUs(NumCPU,
         _parameters=Frontend::parameters(valInput1),
         _task=FC1);
@@ -685,7 +686,7 @@ if (qPlayNext) {
 
 // BEGIN::TEST MULTITHREAD AFFINITY with TasksDispach Complex
 qPlayNext=true;
-//qPlayNext=false;
+qPlayNext=false;
 if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< TEST Multithread Affinity with TasksDispach Complex >>>" << std::endl;
