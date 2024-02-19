@@ -882,7 +882,6 @@ void TasksDispachComplex::RunTaskInNumCPUs(const std::vector<int> & numCPU,Ts &&
   auto && parameters = args.get_else(_parameters,std::make_tuple());
   Backend::Runtime runtime;
   
-
   for (int i = 0; i < nbTh; i++) {
     if (qUseIndex) { std::get<0>(parameters)=i; }
     auto tp=std::tuple_cat( 
@@ -943,20 +942,23 @@ void testScanAllThreadMethods()
     Color(3); std::cout<<nbThreads;
     Color(7); std::cout<<"] Thread Methods >>> ";
     Fg1.setFileName("Results"); 
-    Fg1.init(1,nbThreads,true); Fg1.qViewChrono=qChrono; 
-    std::vector<double> valuesVec1=Fg1.sub_run_multithread_beta(P001);
+    Fg1.init(0,nbThreads,true); Fg1.qViewChrono=qChrono; 
+    //std::vector<double> valuesVec1=Fg1.sub_run_multithread_beta(P001);
+    std::vector<double> valuesVec1=Fg1.run_beta(P001);
     double Value1=std::reduce(valuesVec1.begin(),valuesVec1.end()); 
 
     TasksDispach Fg2; 
     Fg2.setFileName("Results"); 
     Fg2.init(1,nbThreads,true); Fg2.qViewChrono=qChrono; 
-    std::vector<double> valuesVec2=Fg2.sub_run_async_beta(P001);
+    //std::vector<double> valuesVec2=Fg2.sub_run_async_beta(P001);
+    std::vector<double> valuesVec2=Fg1.run_beta(P001);
     double Value2=std::reduce(valuesVec2.begin(),valuesVec2.end()); 
 
     TasksDispach Fg3; 
     Fg3.setFileName("Results"); 
     Fg3.init(2,nbThreads,true); Fg3.qViewChrono=qChrono; 
-    std::vector<double> valuesVec3=Fg3.sub_run_specx_beta(P001);
+    //std::vector<double> valuesVec3=Fg3.sub_run_specx_beta(P001);
+    std::vector<double> valuesVec3=Fg1.run_beta(P001);
     double Value3=std::reduce(valuesVec3.begin(),valuesVec3.end()); 
     if ((Value1==Value2) && (Value1==Value3)) {
         Color(2); std::cout <<"OK"<< "\n"; 
