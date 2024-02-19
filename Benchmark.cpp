@@ -41,7 +41,7 @@
 #include "napp.hpp"
 #include "Tools.hpp"
 
-#include "TasksDispach.hpp"
+#include "TasksDispatch.hpp"
 
 
 
@@ -80,8 +80,8 @@ void activeBlockTest_Add_Vectors()
 
     std::cout<<"Calcul with std::async"<<"\n";
     VecR.clear();
-    TasksDispach FgCalcul; 
-    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispachSum");  FgCalcul.qViewChrono=false;
+    TasksDispatch FgCalcul; 
+    FgCalcul.init(1,nbThreads,true); FgCalcul.setFileName("TestDispatchSum");  FgCalcul.qViewChrono=false;
     FgCalcul.run(MyAlgo000);
     std::cout << "Vec A= "; 
     for (auto it = VecA.begin(); it != VecA.end(); it++) { std::cout << *it << " "; }
@@ -97,7 +97,7 @@ void activeBlockTest_Add_Vectors()
     std::cout << "\n"; 
     std::cout<<"Calcul with Specx"<<"\n";
     VecR.clear();
-    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispachSum"); FgCalcul.qViewChrono=false;    //FgCalcul.qSave=false; 
+    FgCalcul.init(2,nbThreads,true); FgCalcul.setFileName("TestDispatchSum"); FgCalcul.qViewChrono=false;    //FgCalcul.qSave=false; 
     FgCalcul.run(MyAlgo000);
     std::cout << "Vec A= "; 
     for (auto it = VecA.begin(); it != VecA.end(); it++) { std::cout << *it << " "; }
@@ -139,14 +139,14 @@ void activeBlockTest_Matrix_Products()
         return true;
     };
 
-    TasksDispach FgCalcul1; 
-    FgCalcul1.init(1,nbThreads,true); FgCalcul1.setFileName("TestDispachMult"); 
+    TasksDispatch FgCalcul1; 
+    FgCalcul1.init(1,nbThreads,true); FgCalcul1.setFileName("TestDispatchMult"); 
     FgCalcul1.run(MyAlgo000);
     std::cout<<"MatR=MatA*MatB with STD::ASYNC"<< "\n";
     WriteMat(MatR,row,col);
 
-    TasksDispach FgCalcul2; 
-    FgCalcul2.init(2,nbThreads,true); FgCalcul2.setFileName("TestDispachMult");
+    TasksDispatch FgCalcul2; 
+    FgCalcul2.init(2,nbThreads,true); FgCalcul2.setFileName("TestDispatchMult");
     FgCalcul2.run(MyAlgo000);
     std::cout<<"MatR=MatA*MatB with Specx"<< "\n";
     WriteMat(MatR,row,col);
@@ -184,12 +184,12 @@ void activeBlockTest_Integral001()
         return true;
     };
    
-    TasksDispach FgCalculIntegral; 
+    TasksDispatch FgCalculIntegral; 
     std::cout<<"\n";
     std::cout<<"\n";
     std::cout<<"PI method std::async"<<"\n";
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
-    FgCalculIntegral.init(1,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); FgCalculIntegral.qViewChrono=false;
+    FgCalculIntegral.init(1,nbThreads,true); FgCalculIntegral.setFileName("TestDispatchIntegral"); FgCalculIntegral.qViewChrono=false;
     FgCalculIntegral.run(MyAlgo000);
     Color(7);
 
@@ -200,7 +200,7 @@ void activeBlockTest_Integral001()
     
     std::cout<<"PI method Specx"<<"\n";
     valuesVec.clear(); std::cout<<"Clear results size="<<valuesVec.size()<< "\n";
-    FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispachIntegral"); FgCalculIntegral.qViewChrono=false;
+    FgCalculIntegral.init(2,nbThreads,true); FgCalculIntegral.setFileName("TestDispatchIntegral"); FgCalculIntegral.qViewChrono=false;
     FgCalculIntegral.run(MyAlgo000);
     Color(7);
     std::cout << "\n"; 
@@ -231,9 +231,9 @@ void activeBlockTest_Integral002(int nbThreads)
 
     std::cout<<"\n";
     std::cout<<"PI method (2) STD::ASYNC"<<"\n";
-    TasksDispach Fg1; 
+    TasksDispatch Fg1; 
     Fg1.setFileName("Test with STD::ASYNC2"); 
-    Fg1.init(1,nbThreads,true);  Fg1.qInfo=false; Fg1.qViewChrono=false; Fg1.qSave=true; Fg1.setFileName("TestDispachIntegral");
+    Fg1.init(1,nbThreads,true);  Fg1.qInfo=false; Fg1.qViewChrono=false; Fg1.qSave=true; Fg1.setFileName("TestDispatchIntegral");
     std::vector<double> valuesVec1=Fg1.run_beta(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec1[k] << " ";  } 
     std::cout << "\n"; 
@@ -247,9 +247,9 @@ void activeBlockTest_Integral002(int nbThreads)
     
     std::cout<<"\n";
     std::cout<<"PI method (2) Specx"<<"\n";
-    TasksDispach Fg2; 
+    TasksDispatch Fg2; 
     Fg2.setFileName("Test with STD::ASYNC2"); 
-    Fg2.init(2,nbThreads,true);  Fg2.qInfo=false; Fg2.qViewChrono=false; Fg2.qSave=true; Fg2.setFileName("TestDispachIntegral");
+    Fg2.init(2,nbThreads,true);  Fg2.qInfo=false; Fg2.qViewChrono=false; Fg2.qSave=true; Fg2.setFileName("TestDispatchIntegral");
     std::vector<double> valuesVec2=Fg2.run_beta(MyAlgo000);
     std::cout << "Vec R= "; for (int k=0; k<nbThreads; k++) { Color(k+1); std::cout << valuesVec2[k] << " ";  } 
     std::cout << "\n"; 
@@ -267,18 +267,18 @@ void activeBlockTest_Integral002(int nbThreads)
 
 void activeBlockTest_Detach1()
 {
-    std::cout <<"Test detach 2 with TasksDispach"<<std::endl;
+    std::cout <<"Test detach 2 with TasksDispatch"<<std::endl;
     auto MyAlgoDetach1 = []{ std::cout <<"I live 1!"<<std::endl; sleep(1);  std::cout <<"YES 1!"<<std::endl;  return 123;};
     auto MyAlgoDetach2 = []{ std::cout <<"I live 2!"<<std::endl; sleep(10); std::cout <<"YES 2!"<<std::endl;  return 123;};
     auto MyAlgoDetach3 = []{ std::cout <<"I live 3!"<<std::endl; sleep(2);  std::cout <<"YES 3!"<<std::endl;  return 123;};
 
-    TasksDispach Fg1; 
+    TasksDispatch Fg1; 
     auto t1=Fg1.sub_detach_future_alpha(MyAlgoDetach1);
 
-    TasksDispach Fg2; 
+    TasksDispatch Fg2; 
     auto t2=Fg2.sub_detach_future_beta(MyAlgoDetach2);
 
-    TasksDispach Fg3; 
+    TasksDispatch Fg3; 
     std::future<int> myfutureFg3=Fg3.sub_detach_future_gamma<int, decltype(MyAlgoDetach3)>(MyAlgoDetach3);
     t1.get(); t2.get(); myfutureFg3.get();
 }
@@ -308,7 +308,7 @@ void activeBlockTest_Detach2()
     return true;};
 
     auto begin3 = std::chrono::steady_clock::now();
-    TasksDispach Fg; 
+    TasksDispatch Fg; 
     Fg.sub_detach_specx_beta(fA,1,Md,1);
     auto end3 = std::chrono::steady_clock::now();
     std::cout << "===> dt 3: "<< std::chrono::duration_cast<std::chrono::microseconds>(end3 - begin3).count()<< " us\n";std::cout<<"\n"; 
@@ -335,7 +335,7 @@ void activeBlockTest_Vector(int time_sleep)
         return true;
     };
 
-    TasksDispach Fg; 
+    TasksDispatch Fg; 
     std::vector<double> valuesVec;
 
     std::cout<<"With multithread level 2"<< "\n";
@@ -389,11 +389,11 @@ void activeBlockTest_runtask_Affinity()
     };
     //END::Lambda function part
 
-    //BEGIN::Run multithread with TaskDispach
-    TasksDispach Fg; 
+    //BEGIN::Run multithread with TaskDispatch
+    TasksDispatch Fg; 
     Fg.RunTaskInNumCPUs(NumCPU,FC1);
     std::cout << "val1="<<val1<< std::endl;
-    //END::Run multithread with TaskDispach
+    //END::Run multithread with TaskDispatch
 }
 
 
@@ -421,20 +421,20 @@ void activeBlockTest_runtask_LoopAsync()
     };
     //END::Lambda function part
 
-    const int valInput1=3;
+    int valInput1=3;
     double valOutput1=1.5;
 
-    //BEGIN::Run multithread with TaskDispachCompex
-    TasksDispachComplex Test1; 
+    //BEGIN::Run multithread with TaskDispatchCompex
+    TasksDispatchComplex Test1; 
     Test1.numTypeTh=1; //<<< std::Async=1
     Test1.qSave=true;
     Test1.setNbThread(2);
     Test1.run( 
-        _parameters=Frontend::parameters(valInput1,valOutput1),
+        _parameters=Frontend::parameters(std::cref(valInput1),valOutput1),
         _task=FC1);
 
     std::cout <<"val1="<<val1<< " valOutput1="<<valOutput1<< "\n";
-    //END::Run multithread with TaskDispachCompex
+    //END::Run multithread with TaskDispatchCompex
 }
 
 
@@ -459,26 +459,26 @@ void activeBlockTest_runtask_LoopSpecx()
     };
     //END::Lambda function part
 
-    const int valInput1=3;
+    int valInput1=3;
     double valOutput1=1.5;
 
-    //BEGIN::Run multithread with TaskDispachCompex
-    TasksDispachComplex Test1; 
+    //BEGIN::Run multithread with TaskDispatchCompex
+    TasksDispatchComplex Test1; 
     Test1.numTypeTh=2; //<<< Specx=2
     Test1.qSave=true; 
     Test1.setNbThread(2);
     Test1.run(
-        _parameters=Frontend::parameters(valInput1,valOutput1),
+        _parameters=Frontend::parameters(std::cref(valInput1),valOutput1),
         _task=FC1);
 
     std::cout <<"val1="<<val1<< " valOutput1="<<valOutput1<< "\n";
-    //END::Run multithread with TaskDispachCompex
+    //END::Run multithread with TaskDispatchCompex
 }
 
 
 
 //================================================================================================================================
-// BLOCK TEST Affinity with TasksDispach
+// BLOCK TEST Affinity with TasksDispatch
 //================================================================================================================================
 
 void activeBlockTest_runtask_Affinity2()
@@ -505,14 +505,14 @@ void activeBlockTest_runtask_Affinity2()
     };
     //END::Lambda function part
 
-    //BEGIN::Run multithread with TaskDispach
-    TasksDispachComplex Test1; 
+    //BEGIN::Run multithread with TaskDispatch
+    TasksDispatchComplex Test1; 
     Test1.RunTaskInNumCPUs(NumCPU,
         _parameters=Frontend::parameters(valInput1),
         _task=FC1);
     std::cout << "val1="<<val1<< std::endl;
     Color(7);
-    //END::Run multithread with TaskDispach
+    //END::Run multithread with TaskDispatch
 }
 
 //================================================================================================================================
@@ -549,15 +549,15 @@ void activeBlockTest_Integral()
     const int valInput1=0;
     double valOutput1=0.0;
 
-    //BEGIN::Run multithread with TaskDispachCompex
-    TasksDispachComplex Test1; 
+    //BEGIN::Run multithread with TaskDispatchCompex
+    TasksDispatchComplex Test1; 
     Test1.numTypeTh=1; 
     Test1.setNbThread(nbThreads);
     Test1.run(
         _parameters=Frontend::parameters(valInput1,valOutput1),
         _task=FC1);
 
-    //END::Run multithread with TaskDispachCompex
+    //END::Run multithread with TaskDispatchCompex
 }
 
 //================================================================================================================================
@@ -658,42 +658,42 @@ if (qPlayNext) {
 // END::TEST VECTOR with all configuration
 
 
-// BEGIN::TEST TasksDispachComplex LoopAsync
+// BEGIN::TEST TasksDispatchComplex LoopAsync
 qPlayNext=true;
 //qPlayNext=false;
 if (qPlayNext) {
     std::cout << std::endl;
-    std::cout << "<<< TEST TasksDispachComplex LoopAsync part  >>>" << std::endl;
+    std::cout << "<<< TEST TasksDispatchComplex LoopAsync part  >>>" << std::endl;
     activeBlockTest_runtask_LoopAsync();
     std::cout << std::endl;
 }
-// END::TEST TasksDispachComplex LoopAsync
+// END::TEST TasksDispatchComplex LoopAsync
 
 
-// BEGIN::TEST TasksDispachComplex LoopSpecx
+// BEGIN::TEST TasksDispatchComplex LoopSpecx
 qPlayNext=true;
 //qPlayNext=false;
 if (qPlayNext) {
     std::cout << std::endl;
-    std::cout << "<<< TEST TasksDispachComplex LoopSpecx part  >>>" << std::endl;
+    std::cout << "<<< TEST TasksDispatchComplex LoopSpecx part  >>>" << std::endl;
     activeBlockTest_runtask_LoopSpecx();
     std::cout << std::endl;
 }
-// END::TEST TasksDispachComplex LoopSpecx
+// END::TEST TasksDispatchComplex LoopSpecx
 
 
 
 
-// BEGIN::TEST MULTITHREAD AFFINITY with TasksDispach Complex
+// BEGIN::TEST MULTITHREAD AFFINITY with TasksDispatch Complex
 qPlayNext=true;
 qPlayNext=false;
 if (qPlayNext) {
     std::cout << std::endl;
-    std::cout << "<<< TEST Multithread Affinity with TasksDispach Complex >>>" << std::endl;
+    std::cout << "<<< TEST Multithread Affinity with TasksDispatch Complex >>>" << std::endl;
     activeBlockTest_runtask_Affinity2();
     std::cout << std::endl;
 }
-// END::TEST MULTITHREAD AFFINITY with TasksDispach Complex
+// END::TEST MULTITHREAD AFFINITY with TasksDispatch Complex
 
 
   std::cout << "<<< The End : Well Done >>>" << std::endl << std::endl;
