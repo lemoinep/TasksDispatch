@@ -153,7 +153,7 @@ namespace Frontend
 
 
 //================================================================================================================================
-// CLASS TASKsDISPACH: Provide a family of multithreaded functions...
+// CLASS TASKsDISPATCH: Provide a family of multithreaded functions...
 //================================================================================================================================
 
 // Nota: The objective is to provide a range of tools in the case of using a single variable in multithreading.
@@ -624,7 +624,7 @@ std::vector<double> TasksDispatch::run_beta(Function myFunc)
 
 
 //================================================================================================================================
-// CLASS TASKsDISPACH Complex
+// CLASS TASKsDISPATCH Complex
 //================================================================================================================================
 
 class TasksDispatchComplex 
