@@ -652,8 +652,6 @@ if (qPlayNext) {
 // END::TEST TasksDispatchComplex LoopSpecx
 
 
-
-
 // BEGIN::TEST MULTITHREAD AFFINITY with TasksDispatch Complex
 qPlayNext=true;
 qPlayNext=false;
