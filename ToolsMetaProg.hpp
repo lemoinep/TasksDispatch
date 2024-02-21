@@ -467,3 +467,24 @@ int long_running_task(int target, const std::atomic_bool& cancelled)
 
 //================================================================================================================================
 
+
+
+template<std::size_t N, class TupleT, class NewT>
+constexpr auto replace_tuple_element( const TupleT& t, const NewT& n )
+{
+    constexpr auto tail_size = std::tuple_size<TupleT>::value - N - 1;
+
+    return [&]<std::size_t... I_head, std::size_t... I_tail>
+        ( std::index_sequence<I_head...>, std::index_sequence<I_tail...> )
+        {
+            return std::tuple{
+                std::get<I_head>( t )...,
+                n,
+                std::get<I_tail + N + 1>( t )...
+            };
+        }(  
+           std::make_index_sequence<N>{}, 
+           std::make_index_sequence<tail_size>{} 
+          );
+}
+

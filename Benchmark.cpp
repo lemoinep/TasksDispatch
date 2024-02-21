@@ -404,13 +404,15 @@ void activeBlockTest_runtask_Affinity()
 void activeBlockTest_runtask_LoopAsync() 
 {
     std::cout <<"[TestRunTaskLoop with Async]"<<"\n";
-    int val1=0; int val0=0;
+    int val1=0; 
     std::cout <<"val1="<<val1<< "\n";
-
+    int val0=0; 
+    int ValOutputTab[10];
+ 
     //BEGIN::Lambda function part: the module that will be executed...
     auto FC1=[&](const int &v,double &w) {  
         std::cout <<"--------------------------------------"<< "\n";
-        std::cout <<"Async: I am happy to see you !!!"<< "\n";
+        std::cout <<"Specx: I am happy to see you !!!"<< "\n";
         std::cout <<"Val Input="<<v<< "\n";
         std::cout <<"Val Output="<<w<< "\n";
         std::cout <<"--------------------------------------"<< "\n";
@@ -426,10 +428,10 @@ void activeBlockTest_runtask_LoopAsync()
 
     //BEGIN::Run multithread with TaskDispatchCompex
     TasksDispatchComplex Test1; 
-    Test1.numTypeTh=1; //<<< std::Async=1
-    Test1.qSave=true;
+    Test1.numTypeTh=1; 
+    Test1.qSave=true; 
     Test1.setNbThread(2);
-    Test1.run( 
+    Test1.run(
         _parameters=Frontend::parameters(std::cref(valInput1),valOutput1),
         _task=FC1);
 
@@ -438,12 +440,14 @@ void activeBlockTest_runtask_LoopAsync()
 }
 
 
+
 void activeBlockTest_runtask_LoopSpecx()
 {
     std::cout <<"[TestRunTaskLoop with Specx]"<<"\n";
     int val1=0; 
     std::cout <<"val1="<<val1<< "\n";
     int val0=0; 
+    int ValOutputTab[10];
  
     //BEGIN::Lambda function part: the module that will be executed...
     auto FC1=[&](const int &v,double &w) {  
@@ -494,23 +498,24 @@ void activeBlockTest_runtask_Affinity2()
     //END::Definition of CPUs used
 
     //BEGIN::Lambda function part: the module that will be executed...
-    auto FC1=[&](int &k) {  
+    auto FC1=[](const int &k,double &v) {  
         auto Num=sched_getcpu();
         Color(Num); std::cout<<"HELLO form CPU="<<Num<<std::endl; Color(7);
-        val1++;
+        //v=v+2+k;
+        v=k;
         usleep(1000);
-        std::cout<<"k="<<k<<std::endl;
-        k++;
         return true;
     };
     //END::Lambda function part
 
     //BEGIN::Run multithread with TaskDispatch
+    std::cout << "Output Value Init="<<valOutput1<< std::endl<< std::endl;
     TasksDispatchComplex Test1; 
     Test1.RunTaskInNumCPUs(NumCPU,
-        _parameters=Frontend::parameters(valInput1),
-        _task=FC1);
-    std::cout << "val1="<<val1<< std::endl;
+        _parameters=Frontend::parameters(std::cref(valInput1),std::ref(valOutput1)),
+        _task=FC1); 
+    std::cout << std::endl;
+    std::cout << "Output Value Results="<<valOutput1<< std::endl;
     Color(7);
     //END::Run multithread with TaskDispatch
 }
@@ -523,42 +528,7 @@ void activeBlockTest_runtask_Affinity2()
 
 
 
-void activeBlockTest_Integral()
-{
-    std::cout <<"[TestRunTaskLoop Integral with Specx]"<<"\n";
-    int nbThreads=2;
-    long int nbN=1000000;
-    int sizeBlock=nbN/nbThreads;
-    int diffBlock=nbN-sizeBlock*nbThreads;
-    double h=1.0/double(nbN);
-    double integralValue=0.0;
-    std::vector<double> valuesVec;
-    valuesVec.clear();
 
-    //BEGIN::Lambda function part: the module that will be executed...
-    auto FC1=[h,sizeBlock](const int k,double& s) {  
-            int vkBegin=k*sizeBlock;
-            int vkEnd=(k+1)*sizeBlock;
-            double sum=0.0; double x=0.0;
-            for(int j=vkBegin;j<vkEnd;j++) { x=h*double(j); sum+=4.0/(1.0+x*x); }
-            s=sum;
-        return true;
-    };
-    //END::Lambda function part
-
-    const int valInput1=0;
-    double valOutput1=0.0;
-
-    //BEGIN::Run multithread with TaskDispatchCompex
-    TasksDispatchComplex Test1; 
-    Test1.numTypeTh=1; 
-    Test1.setNbThread(nbThreads);
-    Test1.run(
-        _parameters=Frontend::parameters(valInput1,valOutput1),
-        _task=FC1);
-
-    //END::Run multithread with TaskDispatchCompex
-}
 
 //================================================================================================================================
 //================================================================================================================================
@@ -660,7 +630,7 @@ if (qPlayNext) {
 
 // BEGIN::TEST TasksDispatchComplex LoopAsync
 qPlayNext=true;
-//qPlayNext=false;
+qPlayNext=false;
 if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< TEST TasksDispatchComplex LoopAsync part  >>>" << std::endl;
@@ -672,7 +642,7 @@ if (qPlayNext) {
 
 // BEGIN::TEST TasksDispatchComplex LoopSpecx
 qPlayNext=true;
-//qPlayNext=false;
+qPlayNext=false;
 if (qPlayNext) {
     std::cout << std::endl;
     std::cout << "<<< TEST TasksDispatchComplex LoopSpecx part  >>>" << std::endl;
