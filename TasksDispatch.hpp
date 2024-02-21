@@ -652,6 +652,9 @@ class TasksDispatchComplex
         template <typename ... Ts>
             void runTaskSimple( Ts && ... ts );
 
+        template <typename ... Ts>
+            void runTaskSimpleSpecx( Ts && ... ts );
+
         //BEGIN::multithread with std::ansync or Specx or ... part
         template <typename ... Ts>
             void run( Ts && ... ts );
@@ -737,6 +740,32 @@ void TasksDispatchComplex::runTaskSimple( Ts && ... ts )
 }
 
 template <typename ... Ts>
+void TasksDispatchComplex::runTaskSimpleSpecx( Ts && ... ts )
+{
+    auto begin = std::chrono::steady_clock::now();
+    auto args = NA::make_arguments( std::forward<Ts>(ts)... );
+    auto && task = args.get(_task);
+    auto && parameters = args.get_else(_parameters,std::make_tuple());
+    Backend::Runtime runtime;
+    std::cout <<"Specx nbTh="<<nbTh<< "\n";
+    SpRuntime runtime_Specx(nbTh); 
+    auto tpBackend=Backend::makeSpDataSpecx( parameters );
+         int NbtpBackend=std::tuple_size<decltype(tpBackend)>::value;
+        std::cout <<"Size tpBackend="<<NbtpBackend<< std::endl;
+
+    auto tpSpecx=std::tuple_cat( 
+					Backend::makeSpDataSpecx( parameters ), 
+					std::make_tuple( task ) 
+				);
+
+    std::apply([&](auto &&... args) { runtime_Specx.task(args...); },tpSpecx);
+    runtime_Specx.waitAllTasks();
+    runtime_Specx.stopAllThreads();
+    auto end = std::chrono::steady_clock::now();
+    if (qViewChrono) {  std::cout << "===> Elapsed microseconds: "<< std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()<< " us\n"; std::cout<<"\n"; }
+}
+
+template <typename ... Ts>
 void TasksDispatchComplex::sub_runTaskLoopAsync( Ts && ... ts )
 {
     auto begin = std::chrono::steady_clock::now();
@@ -750,11 +779,12 @@ void TasksDispatchComplex::sub_runTaskLoopAsync( Ts && ... ts )
     for (int k = 0; k < nbTh; k++) {
         if (qInfo) { std::cout<<"Call num Thread futures="<<k<<"\n"; }
 
-        if (qUseIndex) { std::get<1>(parameters)=k;  }
+        if (qUseIndex) { std::get<0>(parameters)=std::cref(k); /*std::cout<<"k="<<std::get<0>(parameters)<<"\n";*/ }
 		auto tp=std::tuple_cat( 
 					Backend::makeSpData( parameters ), 
 					std::make_tuple( task ) 
 				);
+
 		auto LamdaTransfert = [&]() {
 			std::apply([&runtime](auto... args){ runtime.task(args...); }, tp);
             return true; 
@@ -771,10 +801,6 @@ void TasksDispatchComplex::sub_runTaskLoopAsync( Ts && ... ts )
                 std::async(std::launch::async,LamdaTransfert));
         }
     }
-
-    
-   
-
 
     for( auto& r : futures){ auto a =  r.get(); }
     auto end = std::chrono::steady_clock::now();
@@ -880,13 +906,17 @@ void TasksDispatchComplex::RunTaskInNumCPUs(const std::vector<int> & numCPU,Ts &
   auto && task = args.get(_task);
   auto && parameters = args.get_else(_parameters,std::make_tuple());
   Backend::Runtime runtime;
+
+  qUseIndex=true;
   
   for (int i = 0; i < nbTh; i++) {
-    if (qUseIndex) { std::get<0>(parameters)=i; }
+    int const& idk = i;
+    if (qUseIndex) { std::get<0>(parameters)=idk; }
     auto tp=std::tuple_cat( 
-                        Backend::makeSpData( parameters ), 
-                        std::make_tuple( task ) 
-                    );
+            Backend::makeSpData( parameters ), 
+                      std::make_tuple( task ) 
+    );
+
     auto LamdaTransfert = [&]() {
                 std::apply([&runtime](auto... args){ runtime.task(args...); }, tp);
                 return true; 
