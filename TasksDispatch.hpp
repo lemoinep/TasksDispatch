@@ -941,6 +941,84 @@ void TasksDispatchComplex::RunTaskInNumCPUs(const std::vector<int> & numCPU,Ts &
 }
 
 
+//================================================================================================================================
+// CLASS TASKsDISPATCH Complex Beta
+//================================================================================================================================
+
+class TasksDispatchComplexBeta
+{
+    private:
+        int nbThTotal;   
+        std::vector<int> indice;
+        void initIndice();
+        std::string FileName;
+        template <typename ... Ts>
+        auto parameters(Ts && ... ts);
+    public:
+        //BEGIN::Small functions and variables to manage initialization parameters
+        int nbTh;
+        int numTypeTh;
+        bool qViewChrono;
+        bool qInfo;
+        bool qSave;
+        bool qDeferred;
+        bool qUseIndex;
+
+        void setNbThread(int v);
+        int  getNbMaxThread();
+        void setFileName(std::string s);
+        //END::Small functions and variables to manage initialization parameters
+        TasksDispatchComplexBeta(void);
+        ~TasksDispatchComplexBeta(void);
+};
+
+TasksDispatchComplexBeta::TasksDispatchComplexBeta()
+{
+    nbThTotal=std::thread::hardware_concurrency();
+    nbTh=nbThTotal;
+    qViewChrono=false;
+    qInfo=false;
+    qSave=false;
+    qDeferred=true;
+    numTypeTh=0;
+    qUseIndex=false;
+    FileName="NoName";
+}
+
+TasksDispatchComplexBeta::~TasksDispatchComplexBeta()
+{
+    //... must be defined
+}
+
+void TasksDispatchComplexBeta::setFileName(std::string s)
+{
+    FileName=s;
+}
+
+void TasksDispatchComplexBeta::setNbThread(int v)
+{
+    nbTh=std::min(v,nbThTotal);
+    initIndice();
+}
+
+int TasksDispatchComplexBeta::getNbMaxThread()
+{
+    nbThTotal=std::thread::hardware_concurrency();
+    return(nbThTotal);
+}
+
+void TasksDispatchComplexBeta::initIndice()
+{
+    indice.clear(); for (int i = 1; i <= nbTh; ++i)  { indice.push_back(i); }
+}
+
+template <typename ... Ts>
+auto TasksDispatchComplexBeta::parameters(Ts && ... ts)
+{
+    return std::forward_as_tuple( std::forward<Ts>(ts)... );
+}
+
+
 
 
 //================================================================================================================================
